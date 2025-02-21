@@ -1,3 +1,4 @@
-# war_game
-# hello_world
-# have_fun
+hello_world
+war_game
+have_fun
+https://adamvangrover.github.io/war_game/
