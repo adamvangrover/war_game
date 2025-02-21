@@ -1,7 +1,8 @@
 ```markdown
 # Simple Card Games - War
 
-This repository contains a simple implementation of the card game "War" using HTML, CSS, and JavaScript. It's a fun and easy game to play!
+This repository contains a simple implementation of the card game "War" using HTML, CSS, and JavaScript.
+It's a fun and easy game to play!
 Try it out online at [https://adamvangrover.github.io/war_game/]
 
 ## How to Play
