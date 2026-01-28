@@ -1,59 +1,81 @@
-```markdown
 # Simple Card Games - War
 
-This repository contains a simple implementation of the card game "War" using HTML, CSS, and JavaScript.
-It's a fun and easy game to play!
-Try it out online at [https://adamvangrover.github.io/war_game/]
+This repository contains a modernized, modular implementation of the classic card game "War" using HTML5, CSS3, and JavaScript (ES6+).
 
-## How to Play
-
-1.  Clone this repository to your computer.
-2.  Open `index.html` in your web browser.
-3.  Click "Draw Cards" to start a round.
-4.  The game compares the cards.
-5.  Higher card wins the round.
-6.  Equal cards?  It's War!  Three cards face down, one face up. Higher face-up card takes all. Wars can chain!
-7.  First player to get all the cards wins!
-8.  Click "New Game" to play again.
+## Play Now
+Open `index.html` in a modern web browser, or serve it locally for the best experience.
 
 ## Features
 
-*   **Card Display:** Cards show up on the canvas.
-*   **Round Scores:**  Keeps track of rounds won.
-*   **Game Scores:** Tracks overall wins.
-*   **War!:** Handles the War rule (and chained Wars!).
-*   **Game Over:**  Knows when the game ends.
-*   **New Game:** Starts a fresh game.
-*   **Clear Messages:** Tells you what's happening.
-*   **Responsive:** Works well on different screen sizes.
+*   **Modern Tech Stack:** Written in ES6+ JavaScript modules.
+*   **Visual Overhaul:**
+    *   Responsive design with a green felt table theme.
+    *   CSS 3D transforms for realistic card flips.
+    *   SVG-based card graphics (no external images required).
+    *   Smooth animations for dealing and winning cards.
+*   **Audio:** Sound effects for shuffling, drawing, flipping, and winning (using Web Audio API).
+*   **Robust Logic:**
+    *   Handles standard "War" rules and chained Wars.
+    *   Edge case handling (e.g., running out of cards during a war).
+*   **Quality Assurance:**
+    *   Comprehensive unit tests using Vitest.
 
-## Technologies
+## How to Play
 
-*   HTML
-*   CSS
-*   JavaScript
-*   Canvas API
+1.  **Objective:** Win all the cards in the deck.
+2.  **Draw:** Click "Draw Cards" (or press Spacebar) to flip the top card of your deck.
+3.  **Battle:**
+    *   Higher rank wins the round and takes both cards.
+    *   Ranks: 2 (lowest) to Ace (highest).
+4.  **War:**
+    *   If cards are of equal rank, "War" is declared.
+    *   Three cards are placed face down, and one card face up.
+    *   Compare the face-up cards. Winner takes all (10 cards!).
+    *   If tied again, War continues!
+5.  **Winning:** The game ends when one player holds all 52 cards.
 
-## Project Files
+## Development
 
-simple-card-games-war/
-├── index.html     # The main HTML file
-└── README.md    # This file
+### Setup
 
+1.  Clone the repository.
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
 
-## Future Ideas
+### Running Locally
 
-*   Better card graphics.
-*   Sound effects!
-*   Multiplayer mode.
-*   Animations!
-*   More card games!
+Start the development server:
+```bash
+npx vite
+```
+Then open the provided URL (usually `http://localhost:5173`).
+
+### Testing
+
+Run the test suite to verify game logic:
+```bash
+npm test
+```
+
+## Project Structure
+
+*   `src/`: Source code
+    *   `Game.js`: Core game rules and state machine.
+    *   `Deck.js`: Deck management (shuffle, deal).
+    *   `Player.js`: Player state.
+    *   `Card.js`: Card rendering and data.
+    *   `UI.js`: DOM manipulation and animations.
+    *   `AudioManager.js`: Sound synthesis.
+    *   `styles.css`: Visual styling and animations.
+*   `tests/`: Unit tests (Vitest).
 
 ## Credits
 
-Developed by adamvangrover.
+Original concept by adamvangrover.
+Upgraded by Jules (AI Assistant).
 
 ## License
 
-MIT License (See LICENSE file)
-```
+MIT License

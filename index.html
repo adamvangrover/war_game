@@ -1,446 +1,59 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Simple Card Games - War with Round & Game Scores</title>
-<style>
-body {
-    font-family: sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background-color: #224422;
-    margin: 0;
-    color: #eee;
-}
- 
-#card-game-container {
-    width: 800px;
-    height: 650px;
-    border: 2px solid #bbb;
-    border-radius: 10px;
-    overflow: hidden;
-    position: relative;
-    background-color: #333;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.6);
-}
- 
-#cardCanvas {
-    display: block;
-    width: 100%;
-    height: 550px;
-    background-color: #336633;
-    cursor: pointer;
-}
- 
-#game-controls {
-    display: flex;
-    justify-content: center;
-    padding: 10px 0;
-    background-color: #444;
-}
- 
-button {
-    padding: 10px 20px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: none;
-    background-color: #ccaa66;
-    color: #333;
-    cursor: pointer;
-    box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
-    transition: background-color 0.3s ease;
-}
-button:hover {
-    background-color: #ddbb77;
-}
-button:disabled {
-    background-color: #999;
-    color: #555;
-    cursor: default;
-    box-shadow: none;
-}
- 
-#game-message {
-    margin-top: 10px;
-    font-weight: bold;
-    min-height: 30px;
-    text-align: center;
-    padding: 0 15px;
-    box-sizing: border-box;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
- 
-#score-display {
-    margin-top: 10px;
-    text-align: center;
-    font-size: 1.2em;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
- 
-#round-score-display {
-    margin-top: 5px; /* Spacing between game and round scores */
-    text-align: center;
-    font-size: 0.9em; /* Smaller font for round scores */
-    color: #ccc; /* Slightly lighter color for round scores */
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>War Card Game - Upgraded</title>
+  <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
- 
-<div id="card-game-container">
-    <canvas id="cardCanvas" width="800" height="550"></canvas>
-    <div id="game-controls">
-        <button id="drawCardButton">Draw Cards</button>
+
+  <div id="game-container">
+    <!-- Top Player (Player 2) -->
+    <div class="player-zone" id="p2-zone">
+      <div class="player-info">
+        <h3>Player 2</h3>
+        <div id="p2-score">Wins: 0 | Cards: 26</div>
+        <div id="p2-rounds">Rounds: 0</div>
+      </div>
+      <div class="deck-container" id="p2-deck">
+        <!-- Deck visual placeholder -->
+        <div class="card-face card-back" style="border-radius: 10px;"></div>
+      </div>
     </div>
-</div>
-<div id="game-message">Welcome to War! Click "Draw Cards" to start.</div>
-<div id="score-display">Player 1 Wins: 0 | Player 2 Wins: 0</div>
-<div id="round-score-display">Round Wins: Player 1: 0 | Player 2: 0</div>
- 
-<script>
-const cardCanvas = document.getElementById('cardCanvas');
-const ctx = cardCanvas.getContext('2d');
-const messageDisplay = document.getElementById('game-message');
-const drawCardButton = document.getElementById('drawCardButton');
-const scoreDisplay = document.getElementById('score-display');
-const roundScoreDisplay = document.getElementById('round-score-display');
- 
-let deck = [];
-let player1Hand = [];
-let player2Hand = [];
-let player1Card = null;
-let player2Card = null;
-let warPile = [];
-let gameInProgress = false;
-let player1Wins = 0;
-let player2Wins = 0;
-let player1RoundsWon = 0;
-let player2RoundsWon = 0;
-let isDrawing = false; // Flag to prevent multiple draws
- 
-// --- Card Deck Functions ---
-function createDeck() {
-    const suits = ['♥', '♦', '♣', '♠'];
-    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-    const deck = [];
-    for (let suit of suits) {
-        for (let rank of ranks) {
-            deck.push({ suit: suit, rank: rank });
-        }
-    }
-    return deck;
-}
- 
-function shuffleDeck(deck) {
-    for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-    return deck;
-}
- 
-function dealCards(deck) {
-    player1Hand = [];
-    player2Hand = [];
-    const halfDeck = Math.ceil(deck.length / 2);
-    player1Hand = deck.slice(0, halfDeck);
-    player2Hand = deck.slice(halfDeck);
-}
- 
-// --- Card Graphics Functions ---
-function drawCard(ctx, card, x, y, owner) {
-    if (!card) return;
- 
-    const cardWidth = 80;
-    const cardHeight = 120;
-    const cornerRadius = 10;
-    const textColor = '#000';
-    const player1Color = '#007bff';
-    const player2Color = '#dc3545';
-    const cardBackColor = '#fff';
- 
-    ctx.fillStyle = cardBackColor;
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x + cornerRadius, y);
-    ctx.lineTo(x + cardWidth - cornerRadius, y);
-    ctx.quadraticCurveTo(x + cardWidth, y, x + cardWidth, y + cornerRadius);
-    ctx.lineTo(x + cardWidth, y + cardHeight - cornerRadius);
-    ctx.quadraticCurveTo(x + cardWidth, y + cardHeight, x + cardWidth - cornerRadius, y + cardHeight);
-    ctx.lineTo(x + cornerRadius, y + cardHeight);
-    ctx.quadraticCurveTo(x, y + cardHeight, x, y + cardHeight - cornerRadius);
-    ctx.lineTo(x, y + cornerRadius);
-    ctx.quadraticCurveTo(x, y, x + cornerRadius, y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
- 
-    ctx.fillStyle = textColor;
-    ctx.font = '20px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
- 
-    const rankDisplay = card.rank;
-    const suitDisplay = card.suit;
-    ctx.fillText(rankDisplay, x + cardWidth / 2, y + 20);
-    ctx.fillText(suitDisplay, x + cardWidth / 2, y + 50);
- 
-    ctx.fillStyle = owner === 'player1' ? player1Color : owner === 'player2' ? player2Color : '#999';
-    ctx.fillRect(x, y, cardWidth, 8);
-}
- 
-function drawCardBack(ctx, x, y, owner) {
-    const cardWidth = 80;
-    const cardHeight = 120;
-    const cornerRadius = 10;
-    const player1Color = '#007bff';
-    const player2Color = '#dc3545';
- 
-    ctx.fillStyle = owner === 'player1' ? player1Color : player2Color;
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x + cornerRadius, y);
-    ctx.lineTo(x + cardWidth - cornerRadius, y);
-    ctx.quadraticCurveTo(x + cardWidth, y, x + cardWidth, y + cornerRadius);
-    ctx.lineTo(x + cardWidth, y + cardHeight - cornerRadius);
-    ctx.quadraticCurveTo(x + cardWidth, y + cardHeight, x + cardWidth - cornerRadius, y + cardHeight);
-    ctx.lineTo(x + cornerRadius, y + cardHeight);
-    ctx.quadraticCurveTo(x, y + cardHeight, x, y + cardHeight - cornerRadius);
-    ctx.lineTo(x, y + cornerRadius);
-    ctx.quadraticCurveTo(x, y, x + cornerRadius, y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
- 
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(x + cardWidth / 4, y + cardHeight / 4, cardWidth / 2, cardHeight / 2);
-}
- 
-function clearCanvas() {
-    ctx.clearRect(0, 0, cardCanvas.width, cardCanvas.height);
-}
- 
-// --- Game Logic Functions ---
-function getCardRankValue(rank) {
-    const rankOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-    return rankOrder.indexOf(rank);
-}
- 
-function compareCards(card1, card2) {
-    const rank1Value = getCardRankValue(card1.rank);
-    const rank2Value = getCardRankValue(card2.rank);
- 
-    if (rank1Value > rank2Value) {
-        return 'player1';
-    } else if (rank2Value > rank1Value) {
-        return 'player2';
-    } else {
-        return 'war';
-    }
-}
- 
-function drawWarCards(ctx, player1WarCards, player2WarCards) {
-    let startX = 250;
-    const cardSpacing = 25;
- 
-    player1WarCards.forEach((card, index) => {
-        drawCardBack(ctx, startX + index * cardSpacing, 350, 'player1');
-    });
- 
-    startX = 250;
-    player2WarCards.forEach((card, index) => {
-        drawCardBack(ctx, startX + index * cardSpacing, 450, 'player2');
-    });
-}
- 
-function handleWar() {
-    displayMessage("War!");
-    // Use a loop instead of recursion
-    while (true) {
-        if (player1Hand.length < 4 || player2Hand.length < 4) {
-            endGame();
-            return;
-        }
- 
-        const player1WarCards = [];
-        const player2WarCards = [];
- 
-        for (let i = 0; i < 3; i++) {
-            player1WarCards.push(player1Hand.shift());
-            player2WarCards.push(player2Hand.shift());
-            warPile.push(player1WarCards[i]);
-            warPile.push(player2WarCards[i]);
-        }
- 
-        player1Card = player1Hand.shift();
-        player2Card = player2Hand.shift();
- 
-        warPile.push(player1Card); //Add to war pile
-        warPile.push(player2Card);
- 
-        clearCanvas();
-        displayBoard();
-        drawCard(ctx, player1Card, 150, 200, 'player1');
-        drawCard(ctx, player2Card, 550, 200, 'player2');
-        drawWarCards(ctx, player1WarCards, player2WarCards);
- 
-        const warResult = compareCards(player1Card, player2Card);
-        if (warResult === 'player1') {
-            displayMessage("Player 1 wins the War!");
-            player1Hand.push(...warPile);
-            warPile = [];
-            break; // Exit the loop
-        } else if (warResult === 'player2') {
-            displayMessage("Player 2 wins the War!");
-            player2Hand.push(...warPile);
-            warPile = [];
-            break; // Exit the loop
-        } else {
-            displayMessage("Another War!");
-            // Continue the loop (no recursive call)
-        }
-    }
-    updateScoreDisplay();
-    checkGameEnd();
-}
- 
-function playRound() {
-    if (!gameInProgress || isDrawing) return; // Prevent multiple draws
- 
-    isDrawing = true; // Set the flag
-    drawCardButton.disabled = true; // Disable button during draw
- 
-    if (player1Hand.length === 0 || player2Hand.length === 0) {
-      endGame();
-      isDrawing = false;
-      return;
-    }
- 
-    player1Card = player1Hand.shift();
-    player2Card = player2Hand.shift();
- 
-    clearCanvas();
-    displayBoard();
-    drawCard(ctx, player1Card, 150, 200, 'player1');
-    drawCard(ctx, player2Card, 550, 200, 'player2');
- 
-    const roundResult = compareCards(player1Card, player2Card);
-    if (roundResult === 'player1') {
-      displayMessage("Player 1 wins the round!");
-      player1Hand.push(player1Card, player2Card, ...warPile);
-      warPile = [];
-      player1RoundsWon++;
-    } else if (roundResult === 'player2') {
-      displayMessage("Player 2 wins the round!");
-      player2Hand.push(player2Card, player1Card, ...warPile);
-      warPile = [];
-      player2RoundsWon++;
-    } else {
-      warPile.push(player1Card); //Crucial: Add cards to the pile
-      warPile.push(player2Card);
-      handleWar();
-    }
- 
-    isDrawing = false; // Reset the flag
-    drawCardButton.disabled = false; // Re-enable the button
-    updateScoreDisplay();
-    checkGameEnd();
-}
- 
-function displayMessage(text) {
-    messageDisplay.textContent = text;
-}
- 
-function updateScoreDisplay() {
-    scoreDisplay.textContent = `Player 1 Wins: ${player1Wins} | Player 2 Wins: ${player2Wins}`;
-    roundScoreDisplay.textContent = `Round Wins: Player 1: ${player1RoundsWon} | Player 2: ${player2RoundsWon}`;
-}
- 
-function checkGameEnd() {
-    if (player1Hand.length === 0) {
-        displayGameResult("Player 2 wins the Game!");
-        player2Wins++;
-        gameInProgress = false;
-        drawCardButton.disabled = true;
-    } else if (player2Hand.length === 0) {
-        displayGameResult("Player 1 wins the Game!");
-        player1Wins++;
-        gameInProgress = false;
-        drawCardButton.disabled = true;
-    }
-    updateScoreDisplay();
-}
- 
-function endGame() {
-    if (player1Hand.length > player2Hand.length) {
-        displayGameResult("Player 1 wins the Game by default (opponent ran out of cards in War)!");
-        player1Wins++;
-    } else {
-        displayGameResult("Player 2 wins the Game by default (opponent ran out of cards in War)!");
-        player2Wins++;
-    }
-    gameInProgress = false;
-    drawCardButton.disabled = true;
-    updateScoreDisplay();
-}
- 
-function displayGameResult(gameResult) {
-    displayMessage(gameResult + " Game Over!");
-    drawCardButton.textContent = "New Game";
-}
- 
-function displayBoard() {
-    clearCanvas();
-    ctx.strokeStyle = '#888';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(50, 50, cardCanvas.width - 100, cardCanvas.height - 150);
- 
-    ctx.fillStyle = '#eee';
-    ctx.font = '18px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText("Player 1", 250, 100);
-    ctx.fillText("Player 2", 650, 100);
-}
- 
-// --- Game Start Function ---
-function startWarGame() {
-    gameInProgress = true;
-    drawCardButton.disabled = false;
-    drawCardButton.textContent = "Draw Cards";
-    deck = createDeck();
-    deck = shuffleDeck(deck);
-    dealCards(deck);
-    player1Card = null;
-    player2Card = null;
-    warPile = [];
-    player1RoundsWon = 0;
-    player2RoundsWon = 0;
-    clearCanvas();
-    displayBoard();
-    displayMessage("Game of War Started! Click 'Draw Cards' to play a round.");
-    updateScoreDisplay();
- 
-isDrawing = false; // Make sure drawing flag is reset
-}
- 
-// --- Event Listeners ---
-drawCardButton.addEventListener('click', playRound);
- 
-drawCardButton.addEventListener('click', function() {
-    if (!gameInProgress && drawCardButton.textContent === "New Game") {
-        startWarGame();
-    }
-});
- 
-// --- Initialize Game on Page Load ---
-startWarGame();
-updateScoreDisplay();
- 
-</script>
- 
+
+    <!-- Battle Zone -->
+    <div class="battle-zone">
+      <div class="card-slot" id="p2-slot"></div>
+      <div class="card-slot" id="p1-slot"></div>
+
+      <div id="war-badge" class="war-badge">WAR!</div>
+    </div>
+
+    <!-- Bottom Player (Player 1) -->
+    <div class="player-zone" id="p1-zone">
+      <div class="player-info">
+        <h3>Player 1</h3>
+        <div id="p1-score">Wins: 0 | Cards: 26</div>
+        <div id="p1-rounds">Rounds: 0</div>
+      </div>
+      <div class="deck-container" id="p1-deck">
+        <!-- Deck visual placeholder -->
+        <div class="card-face card-back" style="border-radius: 10px;"></div>
+      </div>
+    </div>
+
+    <div id="controls">
+      <button id="draw-btn">Draw Cards</button>
+      <button id="reset-btn">New Game</button>
+    </div>
+  </div>
+
+  <div id="message-overlay">
+    <h1>Game Over</h1>
+    <button onclick="document.getElementById('reset-btn').click()">Play Again</button>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>
