@@ -1,5 +1,5 @@
-import { Card } from './Card';
-import { RANKS, SUITS } from './constants';
+import { Card } from './Card.js';
+import { RANKS, SUITS } from './constants.js';
 
 export class Deck {
   private cards: Card[] = [];
@@ -19,6 +19,7 @@ export class Deck {
   }
 
   shuffle(): void {
+    // Fisher-Yates shuffle
     for (let i = this.cards.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
@@ -33,7 +34,7 @@ export class Deck {
   }
 
   draw(): Card | undefined {
-    return this.cards.shift();
+    return this.cards.pop();
   }
 
   get length(): number {

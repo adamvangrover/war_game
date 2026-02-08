@@ -5,6 +5,8 @@
   --felt-color: #27ae60;
   --text-color: #ecf0f1;
   --accent-color: #f1c40f;
+  --danger-color: #e74c3c;
+  --success-color: #2ecc71;
 }
 
 body {
@@ -21,6 +23,8 @@ body {
   user-select: none;
 }
 
+/* --- Layout --- */
+
 #game-container {
   flex: 1;
   display: flex;
@@ -33,7 +37,30 @@ body {
 }
 
 #game-container.blurred {
-    filter: blur(5px);
+  filter: blur(5px);
+}
+
+.game-header {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.game-header button {
+  pointer-events: auto;
+}
+
+#game-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  opacity: 0.7;
 }
 
 .player-zone {
@@ -47,10 +74,12 @@ body {
 .player-info {
   position: absolute;
   left: 20px;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 10px 20px;
-  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 15px 25px;
+  border-radius: 12px;
   text-align: center;
+  backdrop-filter: blur(5px);
+  min-width: 150px;
 }
 
 .deck-container {
@@ -73,15 +102,8 @@ body {
   position: relative;
 }
 
-.card-slot {
-  width: var(--card-width);
-  height: var(--card-height);
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.1);
-  position: relative;
-}
+/* --- Cards --- */
 
-/* Card Styles */
 .card {
   width: var(--card-width);
   height: var(--card-height);
@@ -100,32 +122,39 @@ body {
   backface-visibility: hidden;
   border-radius: 10px;
   overflow: hidden;
+  background: white;
 }
 
 .card-front {
   transform: rotateY(180deg);
-  background: white;
 }
 
 .card-back {
-  background: #2c3e50;
+  background: transparent; /* SVG handles background */
 }
 
 .card.flipped {
   transform: rotateY(180deg);
 }
 
-/* Controls */
+/* --- Controls --- */
+
 #controls {
   position: absolute;
   bottom: 20px;
   right: 20px;
   display: flex;
-  gap: 10px;
+  gap: 15px;
   z-index: 100;
+  align-items: center;
 }
 
-button {
+.control-group {
+  display: flex;
+  gap: 10px;
+}
+
+button, .menu-btn {
   background: var(--accent-color);
   border: none;
   padding: 12px 24px;
@@ -138,21 +167,15 @@ button {
   transition: transform 0.1s, box-shadow 0.1s;
 }
 
-button.primary {
-    background: var(--accent-color);
-}
-
 button.secondary {
-    background: #bdc3c7;
-    box-shadow: 0 4px 0 #7f8c8d;
-}
-button.secondary:active {
-    box-shadow: 0 0 0 #7f8c8d;
+  background: #bdc3c7;
+  box-shadow: 0 4px 0 #7f8c8d;
+  color: #2c3e50;
 }
 
 button:active {
   transform: translateY(4px);
-  box-shadow: 0 0 0 #d35400;
+  box-shadow: 0 0 0;
 }
 
 button:disabled {
@@ -162,25 +185,62 @@ button:disabled {
   transform: translateY(4px);
 }
 
-#message-overlay {
+.hidden {
+  display: none !important;
+}
+
+/* --- Overlays & Menus --- */
+
+.overlay, .menu-overlay {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.8);
-  padding: 30px;
-  border-radius: 20px;
-  text-align: center;
-  z-index: 200;
-  pointer-events: none;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.3s;
 }
 
-#message-overlay.visible {
+.overlay.visible, .menu-overlay.visible {
   opacity: 1;
   pointer-events: auto;
 }
+
+.menu-content {
+  background: white;
+  color: #2c3e50;
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  max-width: 500px;
+  width: 90%;
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: 30px 0;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  color: #2c3e50;
+}
+
+/* --- Badges & Messages --- */
 
 .war-badge {
   position: absolute;
@@ -194,6 +254,7 @@ button:disabled {
   opacity: 0;
   transition: transform 0.3s, opacity 0.3s;
   z-index: 50;
+  pointer-events: none;
 }
 
 .war-badge.visible {
@@ -201,47 +262,57 @@ button:disabled {
   transform: translate(-50%, -50%) rotate(0deg) scale(1.2);
 }
 
-/* Menu Overlay */
-.menu-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.85);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 300;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
+.center-message {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  text-align: center;
 }
-.menu-overlay.visible {
-    opacity: 1;
-    pointer-events: auto;
-}
-.menu-overlay h1, .menu-overlay h2 {
-    font-size: 3rem;
-    color: var(--accent-color);
-    margin-bottom: 2rem;
-}
-.menu-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+.center-message.visible { opacity: 1; }
+
+#message-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  color: white;
 }
 
-.setting-item {
-    display: flex;
-    justify-content: space-between;
-    width: 300px;
-    margin-bottom: 1rem;
-    font-size: 1.5rem;
+#message-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-/* Responsive */
+/* --- Responsive --- */
+
 @media (max-width: 600px) {
   :root {
     --card-width: 80px;
     --card-height: 120px;
+  }
+  .player-info {
+    position: relative;
+    left: auto;
+    width: auto;
+    margin-right: 10px;
+    padding: 5px 10px;
+  }
+  .game-grid {
+    grid-template-columns: 1fr;
   }
 }

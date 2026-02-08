@@ -1,4 +1,4 @@
-import { Card } from './Card';
+import { Card } from './Card.js';
 
 export class Player {
   private hand: Card[] = [];
