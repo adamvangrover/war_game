@@ -2,7 +2,7 @@ import { Card } from './Card.js';
 import { RANKS, SUITS } from './constants.js';
 
 export class Deck {
-  public cards: Card[] = [];
+  private cards: Card[] = [];
 
   constructor() {
     this.initialize();
@@ -19,6 +19,7 @@ export class Deck {
   }
 
   shuffle(): void {
+    // Fisher-Yates shuffle
     for (let i = this.cards.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];

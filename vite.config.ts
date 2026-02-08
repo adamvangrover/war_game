@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -13,7 +14,7 @@ export default defineConfig({
         theme_color: '#27ae60',
         icons: [
           {
-            src: 'pwa-192x192.png', // Placeholder, user would need to provide real assets
+            src: 'pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png'
           },
@@ -25,5 +26,12 @@ export default defineConfig({
         ]
       }
     })
-  ]
+  ],
+  build: {
+    target: 'esnext'
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true
+  }
 });

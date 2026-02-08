@@ -1,12 +1,3 @@
-/* Update game grid for menu */
-.game-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin: 30px 0;
-}
-
-/* Base styles from previous iteration */
 :root {
   --card-width: 120px;
   --card-height: 180px;
@@ -32,67 +23,21 @@ body {
   user-select: none;
 }
 
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.85);
+/* --- Layout --- */
+
+#game-container {
+  flex: 1;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+  position: relative;
+  perspective: 1000px;
+  transition: filter 0.3s;
 }
 
-.overlay.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.hidden {
-  display: none !important;
-}
-
-.menu-content, .modal-content {
-  background: white;
-  color: #2c3e50;
-  padding: 40px;
-  border-radius: 20px;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  max-width: 500px;
-  width: 90%;
-}
-
-.menu-btn {
-  background: var(--accent-color);
-  border: none;
-  padding: 15px 30px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: transform 0.1s;
-  color: #2c3e50;
-}
-
-.menu-btn:hover {
-  transform: scale(1.05);
-}
-
-.secondary-btn {
-  background: #95a5a6;
-  border: none;
-  padding: 10px 20px;
-  font-size: 1rem;
-  font-weight: bold;
-  border-radius: 8px;
-  cursor: pointer;
-  color: white;
+#game-container.blurred {
+  filter: blur(5px);
 }
 
 .game-header {
@@ -116,16 +61,6 @@ body {
   font-weight: bold;
   text-transform: uppercase;
   opacity: 0.7;
-}
-
-#game-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 20px;
-  position: relative;
-  perspective: 1000px;
 }
 
 .player-zone {
@@ -167,13 +102,7 @@ body {
   position: relative;
 }
 
-.card-slot {
-  width: var(--card-width);
-  height: var(--card-height);
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.1);
-  position: relative;
-}
+/* --- Cards --- */
 
 .card {
   width: var(--card-width);
@@ -201,12 +130,14 @@ body {
 }
 
 .card-back {
-  background: transparent;
+  background: transparent; /* SVG handles background */
 }
 
 .card.flipped {
   transform: rotateY(180deg);
 }
+
+/* --- Controls --- */
 
 #controls {
   position: absolute;
@@ -223,10 +154,10 @@ body {
   gap: 10px;
 }
 
-.action-btn {
+button, .menu-btn {
   background: var(--accent-color);
   border: none;
-  padding: 15px 30px;
+  padding: 12px 24px;
   font-size: 1.2rem;
   font-weight: bold;
   color: #2c3e50;
@@ -235,21 +166,81 @@ body {
   box-shadow: 0 4px 0 #d35400;
   transition: transform 0.1s, box-shadow 0.1s;
 }
-.action-btn.red { background: var(--danger-color); box-shadow: 0 4px 0 #c0392b; color: white; }
-.action-btn.green { background: var(--success-color); box-shadow: 0 4px 0 #27ae60; color: white; }
-.action-btn.yellow { background: var(--accent-color); box-shadow: 0 4px 0 #f39c12; }
 
-.action-btn:active {
+button.secondary {
+  background: #bdc3c7;
+  box-shadow: 0 4px 0 #7f8c8d;
+  color: #2c3e50;
+}
+
+button:active {
   transform: translateY(4px);
   box-shadow: 0 0 0;
 }
 
-.action-btn:disabled {
+button:disabled {
   background: #95a5a6;
   box-shadow: none;
   cursor: not-allowed;
   transform: translateY(4px);
 }
+
+.hidden {
+  display: none !important;
+}
+
+/* --- Overlays & Menus --- */
+
+.overlay, .menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.overlay.visible, .menu-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.menu-content {
+  background: white;
+  color: #2c3e50;
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  max-width: 500px;
+  width: 90%;
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: 30px 0;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  color: #2c3e50;
+}
+
+/* --- Badges & Messages --- */
 
 .war-badge {
   position: absolute;
@@ -265,6 +256,7 @@ body {
   z-index: 50;
   pointer-events: none;
 }
+
 .war-badge.visible {
   opacity: 1;
   transform: translate(-50%, -50%) rotate(0deg) scale(1.2);
@@ -285,6 +277,29 @@ body {
 }
 .center-message.visible { opacity: 1; }
 
+#message-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  color: white;
+}
+
+#message-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* --- Responsive --- */
+
 @media (max-width: 600px) {
   :root {
     --card-width: 80px;
@@ -295,5 +310,9 @@ body {
     left: auto;
     width: auto;
     margin-right: 10px;
+    padding: 5px 10px;
+  }
+  .game-grid {
+    grid-template-columns: 1fr;
   }
 }

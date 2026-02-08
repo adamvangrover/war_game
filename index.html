@@ -9,7 +9,6 @@
 </head>
 <body>
 
-  <!-- Main Menu -->
   <div id="main-menu" class="overlay visible">
     <div class="menu-content">
       <h1>Card Game Suite</h1>
@@ -23,7 +22,6 @@
     </div>
   </div>
 
-  <!-- Settings Modal -->
   <div id="settings-modal" class="overlay">
     <div class="modal-content">
       <h2>Settings</h2>
@@ -44,14 +42,12 @@
   </div>
 
   <div id="game-container">
-    <!-- Header/Status Bar -->
     <div class="game-header">
       <button id="btn-back-menu" class="icon-btn">☰ Menu</button>
       <button id="btn-rules" class="icon-btn">?</button>
       <div id="game-title">War</div>
     </div>
 
-    <!-- Top Player Zone (P2 / Dealer / Banker) -->
     <div class="player-zone" id="p2-zone">
       <div class="player-info">
         <h3 id="p2-name">Player 2</h3>
@@ -63,7 +59,6 @@
       </div>
     </div>
 
-    <!-- Battle Zone / Table Center -->
     <div class="battle-zone">
       <div class="card-slot" id="p2-slot"></div>
       <div class="card-slot" id="p1-slot"></div>
@@ -72,7 +67,6 @@
       <div id="war-badge" class="war-badge">WAR!</div>
     </div>
 
-    <!-- Bottom Player Zone (P1 / You) -->
     <div class="player-zone" id="p1-zone">
       <div class="player-info">
         <h3 id="p1-name">Player 1</h3>
@@ -84,27 +78,22 @@
       </div>
     </div>
 
-    <!-- Game Controls (Dynamic) -->
     <div id="controls">
-      <!-- War Controls -->
       <div id="controls-war" class="control-group">
         <button id="draw-btn" class="action-btn">Draw Cards</button>
         <button id="autoplay-btn" class="action-btn yellow">Auto Play</button>
       </div>
 
-      <!-- Blackjack Controls -->
       <div id="controls-blackjack" class="control-group hidden">
          <button id="btn-hit" class="action-btn yellow">Hit</button>
          <button id="btn-stand" class="action-btn red">Stand</button>
          <button id="btn-deal" class="action-btn green">Deal</button>
       </div>
 
-      <!-- Baccarat Controls -->
       <div id="controls-baccarat" class="control-group hidden">
          <button id="btn-bac-deal" class="action-btn green">Deal</button>
       </div>
 
-      <!-- High-Low Controls -->
       <div id="controls-highlow" class="control-group hidden">
          <button id="btn-higher" class="action-btn green">Higher</button>
          <button id="btn-lower" class="action-btn red">Lower</button>
@@ -123,7 +112,6 @@
     </div>
   </div>
 
-  <!-- Rules Modal -->
   <div id="rules-modal" class="overlay">
     <div class="modal-content">
       <h2>How to Play</h2>

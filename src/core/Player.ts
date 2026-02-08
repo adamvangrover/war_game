@@ -1,17 +1,11 @@
 import { Card } from './Card.js';
 
 export class Player {
-  public name: string;
-  public hand: Card[];
-  public wins: number;
-  public roundsWon: number;
+  private hand: Card[] = [];
+  public wins: number = 0;
+  public roundsWon: number = 0;
 
-  constructor(name: string) {
-    this.name = name;
-    this.hand = [];
-    this.wins = 0;
-    this.roundsWon = 0;
-  }
+  constructor(public readonly name: string) {}
 
   setHand(cards: Card[]): void {
     this.hand = [...cards];

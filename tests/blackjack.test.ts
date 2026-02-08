@@ -2,54 +2,66 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { BlackjackGame } from '../src/games/BlackjackGame';
 import { Card } from '../src/core/Card';
 
-describe('BlackjackGame Logic', () => {
+describe('BlackjackGame', () => {
   let game: BlackjackGame;
 
   beforeEach(() => {
     game = new BlackjackGame();
+  });
+
+  it('should calculate score correctly (Ace handling)', () => {
+    // Blackjack (Ace + 10-value)
+    const handBJ = [new Card('A', 'spades'), new Card('K', 'hearts')];
+    expect(game.calculateScore(handBJ)).toBe(21);
+
+    // Soft Ace (11 + 5 = 16)
+    const handSoft = [new Card('A', 'spades'), new Card('5', 'hearts')];
+    expect(game.calculateScore(handSoft)).toBe(16);
+
+    // Hard Ace (1 + 5 + 9 = 15) - Ace becomes 1 to prevent bust
+    const handHard = [new Card('A', 'spades'), new Card('5', 'hearts'), new Card('9', 'hearts')];
+    expect(game.calculateScore(handHard)).toBe(15);
+    
+    // Multiple Aces
+    const handAces = [new Card('A', 'spades'), new Card('A', 'hearts')];
+    expect(game.calculateScore(handAces)).toBe(12); // 11 + 1
+  });
+
+  it('should deal initial cards', () => new Promise<void>(done => {
+    game.on('deal', (data) => {
+      expect(game.playerHand.length).toBe(2);
+      expect(game.dealerHand.length).toBe(2);
+      expect(data).toBeDefined();
+      // Ensure the dealer's second card is sent as null (hidden) in the event
+      expect(data.dealerHand[1]).toBeNull();
+      done();
+    });
     game.start();
+  }));
+
+  it('should handle hit', () => {
+    // Disable shuffle to ensure predictable deal (avoiding instant Blackjack)
+    // Ordered deck: 2, 3, 4, 5...
+    game.deck.shuffle = () => {}; 
+    game.start();
+
+    expect(game.state).toBe('playing');
+    const initialCount = game.playerHand.length;
+    
+    game.hit();
+    
+    expect(game.playerHand.length).toBe(initialCount + 1);
   });
 
-  it('should initialize correctly', () => {
-    expect(game.state).toBe('READY');
-    expect(game.player.hand.length).toBe(0);
-  });
-
-  it('should deal cards', () => {
-    // Mock draw to ensure no instant blackjack
-    // Deal 4 cards: P1, B1, P2, B2
-    // We want P to have e.g. 2, 3 (Total 5)
-    // Dealer e.g. 2, 3 (Total 5)
-    const cards = [
-        new Card('2', 'hearts'), new Card('2', 'spades'),
-        new Card('3', 'hearts'), new Card('3', 'spades')
-    ];
-    // draw() pops from end. So reverse order of dealing.
-    // deal() does: p hand = [draw, draw], d hand = [draw, draw]
-    // wait, logic is: this.player.hand = [draw, draw];
-    // So popped cards are: P1, P2.
-    // Then D1, D2.
-    // So deck stack (top to bottom): D2, D1, P2, P1.
-    // array pop order: P1, P2, D1, D2.
-
-    // Actually simpler:
-    game.deck.draw = () => new Card('2', 'clubs'); // Always return 2
-
-    game.deal();
-    expect(game.player.hand.length).toBe(2);
-    expect(game.dealer.hand.length).toBe(2);
-    expect(game.state).toBe('PLAYER_TURN');
-    expect(game.getHandValue(game.player.hand)).toBe(4);
-  });
-
-  it('should calculate hand values correctly', () => {
-    const handWithAce = [new Card('A', 'spades'), new Card('K', 'hearts')];
-    expect(game.getHandValue(handWithAce)).toBe(21);
-
-    const handWithAceSoft = [new Card('A', 'spades'), new Card('5', 'hearts')];
-    expect(game.getHandValue(handWithAceSoft)).toBe(16);
-
-    const handWithAceHard = [new Card('A', 'spades'), new Card('5', 'hearts'), new Card('9', 'hearts')];
-    expect(game.getHandValue(handWithAceHard)).toBe(15);
-  });
+  it('should handle stand and dealer play', () => new Promise<void>(done => {
+      game.start();
+      game.on('game-over', (data) => {
+          // Dealer should have played and a winner declared
+          expect(data.winner).toBeDefined();
+          // Dealer hand should be fully revealed in game over data
+          expect(data.dealerHand.every((c: any) => c !== null)).toBe(true);
+          done();
+      });
+      game.stand();
+  }));
 });

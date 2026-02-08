@@ -1,19 +1,32 @@
-import { Suit, Rank, SUIT_SYMBOLS } from './constants.js';
+import { Suit, Rank, SUIT_SYMBOLS, VALUES } from './constants.js';
 
 const ICONS: Record<Suit, string> = {
-    hearts: '<path d="M50 85 C20 55 10 40 10 25 A20 20 0 0 1 50 25 A20 20 0 0 1 90 25 C90 40 80 55 50 85 Z" />',
-    diamonds: '<path d="M50 10 L90 50 L50 90 L10 50 Z" />',
-    spades: '<path d="M50 15 C40 30 10 35 10 55 A15 15 0 0 0 45 65 L45 80 L55 80 L55 65 A15 15 0 0 0 90 55 C90 35 60 30 50 15 Z" />',
-    clubs: '<path d="M50 10 A15 15 0 0 0 35 30 A15 15 0 0 0 10 45 A15 15 0 0 0 45 55 L45 80 L55 80 L55 55 A15 15 0 0 0 90 45 A15 15 0 0 0 65 30 A15 15 0 0 0 50 10 Z" />'
+  hearts: '<path d="M50 85 C20 55 10 40 10 25 A20 20 0 0 1 50 25 A20 20 0 0 1 90 25 C90 40 80 55 50 85 Z" />',
+  diamonds: '<path d="M50 10 L90 50 L50 90 L10 50 Z" />',
+  spades: '<path d="M50 15 C40 30 10 35 10 55 A15 15 0 0 0 45 65 L45 80 L55 80 L55 65 A15 15 0 0 0 90 55 C90 35 60 30 50 15 Z" />',
+  clubs: '<path d="M50 10 A15 15 0 0 0 35 30 A15 15 0 0 0 10 45 A15 15 0 0 0 45 55 L45 80 L55 80 L55 55 A15 15 0 0 0 90 45 A15 15 0 0 0 65 30 A15 15 0 0 0 50 10 Z" />'
 };
 
 export class Card {
-  constructor(public rank: Rank, public suit: Suit) {}
+  // Adopted 'readonly' from main branch for immutability
+  constructor(public readonly rank: Rank, public readonly suit: Suit) {}
 
+  // Helper from main branch: Essential for game comparison logic
+  get value(): number {
+    return VALUES[this.rank];
+  }
+
+  // Visual color logic from upgrade branch (using specific Hex codes)
   get color(): string {
     return (this.suit === 'hearts' || this.suit === 'diamonds') ? '#e74c3c' : '#2c3e50';
   }
 
+  // Helper from main branch
+  toString(): string {
+    return `${this.rank} of ${this.suit}`;
+  }
+
+  // Kept the superior SVG generation from the upgrade branch (handles Face cards)
   getSVG(): string {
     const fill = this.color;
     const suitIcon = ICONS[this.suit].replace('<path', `<path fill="${fill}"`);
@@ -72,6 +85,7 @@ export class Card {
     `;
   }
 
+  // Kept the polished back pattern from the upgrade branch
   static getBackSVG(): string {
     const pattern = `
       <defs>

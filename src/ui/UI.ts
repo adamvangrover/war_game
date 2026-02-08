@@ -1,172 +1,247 @@
-import { WarGame, WarEvent } from '../games/WarGame.js';
+import { GameController } from '../engine/GameController.js';
+import { WarGame, RoundResult, WarEvent } from '../games/WarGame.js';
 import { BlackjackGame, BlackjackGameState } from '../games/BlackjackGame.js';
 import { BaccaratGame, BaccaratGameState } from '../games/BaccaratGame.js';
 import { HighLowGame, HighLowGameState } from '../games/HighLowGame.js';
 import { AudioManager } from '../core/AudioManager.js';
 import { Card } from '../core/Card.js';
+import { Player } from '../core/Player.js';
+import { Menu } from './Menu.js';
+import { Settings } from './Settings.js';
 
 export class UI {
-  public game: WarGame | BlackjackGame | BaccaratGame | HighLowGame | null;
-  public audio: AudioManager;
-  public mode: 'war' | 'blackjack' | 'baccarat' | 'highlow';
-  public isAnimating: boolean;
-  public speedModifier: number;
-  public autoPlay: boolean;
-  public autoPlayInterval: number | null;
+  // Game State
+  private gameController: GameController;
+  private menu: Menu;
+  private settings: Settings;
+  private isAnimating: boolean = false;
+  private activeListeners: { event: string, cb: any }[] = [];
 
-  // Elements (Cached)
-  public container: HTMLElement | null;
-  public p1Deck: HTMLElement | null;
-  public p2Deck: HTMLElement | null;
-  public p1Slot: HTMLElement | null;
-  public p2Slot: HTMLElement | null;
-  public p1Score: HTMLElement | null;
-  public p2Score: HTMLElement | null;
-  public p1Name: HTMLElement | null;
-  public p2Name: HTMLElement | null;
-  public centerMsg: HTMLElement | null;
-  public warBadge: HTMLElement | null;
-  public msgOverlay: HTMLElement | null;
+  // Core DOM Elements
+  private container: HTMLElement;
+  private p1Deck: HTMLElement;
+  private p2Deck: HTMLElement;
+  private p1Slot: HTMLElement;
+  private p2Slot: HTMLElement;
+  private p1Score: HTMLElement;
+  private p2Score: HTMLElement;
+  private p1Name: HTMLElement | null; // From upgrade branch
+  private p2Name: HTMLElement | null; // From upgrade branch
+  private msgOverlay: HTMLElement;
+  private warBadge: HTMLElement;
+  private centerMsg: HTMLElement | null;
 
-  // Control Groups
-  public controlsWar: HTMLElement | null;
-  public controlsBJ: HTMLElement | null;
-  public controlsBac: HTMLElement | null;
-  public controlsHL: HTMLElement | null;
+  // Control Containers (From upgrade branch)
+  private controlsContainer: HTMLElement;
+  private controlsWar: HTMLElement | null;
+  private controlsBJ: HTMLElement | null;
+  private controlsBac: HTMLElement | null;
+  private controlsHL: HTMLElement | null;
 
-  constructor(game: any, audio: AudioManager) {
-    this.game = game;
-    this.audio = audio;
-    this.mode = 'war';
-    this.isAnimating = false;
-    this.speedModifier = 1.0;
-    this.autoPlay = false;
-    this.autoPlayInterval = null;
+  // Dynamic Buttons (From main branch)
+  private drawBtn: HTMLButtonElement;
+  private resetBtn: HTMLButtonElement;
+  private hitBtn: HTMLButtonElement;
+  private standBtn: HTMLButtonElement;
+  private menuBtn: HTMLButtonElement;
+  private autoPlayBtn: HTMLButtonElement | null = null;
 
-    this.container = document.getElementById('game-container');
-    this.p1Deck = document.getElementById('p1-deck');
-    this.p2Deck = document.getElementById('p2-deck');
-    this.p1Slot = document.getElementById('p1-slot');
-    this.p2Slot = document.getElementById('p2-slot');
-    this.p1Score = document.getElementById('p1-score');
-    this.p2Score = document.getElementById('p2-score');
+  constructor(private audio: AudioManager) {
+    this.gameController = new GameController();
+    this.menu = new Menu();
+    this.settings = new Settings();
+
+    // Cache Elements
+    this.container = document.getElementById('game-container')!;
+    this.controlsContainer = document.getElementById('controls')!;
+    this.p1Deck = document.getElementById('p1-deck')!;
+    this.p2Deck = document.getElementById('p2-deck')!;
+    this.p1Slot = document.getElementById('p1-slot')!;
+    this.p2Slot = document.getElementById('p2-slot')!;
+    this.p1Score = document.getElementById('p1-score')!;
+    this.p2Score = document.getElementById('p2-score')!;
     this.p1Name = document.getElementById('p1-name');
     this.p2Name = document.getElementById('p2-name');
+    this.msgOverlay = document.getElementById('message-overlay')!;
+    this.warBadge = document.getElementById('war-badge')!;
     this.centerMsg = document.getElementById('center-message');
-    this.warBadge = document.getElementById('war-badge');
-    this.msgOverlay = document.getElementById('message-overlay');
 
+    // Cache specific control groups if they exist in HTML
     this.controlsWar = document.getElementById('controls-war');
     this.controlsBJ = document.getElementById('controls-blackjack');
     this.controlsBac = document.getElementById('controls-baccarat');
     this.controlsHL = document.getElementById('controls-highlow');
+
+    // Create/Cache Buttons
+    this.drawBtn = (document.getElementById('draw-btn') as HTMLButtonElement) || this.createButton('Draw', 'draw-btn', 'primary');
+    this.resetBtn = (document.getElementById('reset-btn') as HTMLButtonElement) || this.createButton('Reset', 'reset-btn', 'secondary');
+    this.hitBtn = (document.getElementById('btn-hit') as HTMLButtonElement) || this.createButton('Hit', 'btn-hit', 'primary');
+    this.standBtn = (document.getElementById('btn-stand') as HTMLButtonElement) || this.createButton('Stand', 'btn-stand', 'secondary');
+    this.menuBtn = (document.getElementById('btn-menu') as HTMLButtonElement) || this.createButton('Menu', 'btn-menu', 'secondary');
+
+    // Menu Wiring
+    this.menu.onWarSelect = () => this.startWar();
+    this.menu.onBlackjackSelect = () => this.startBlackjack();
+    this.menu.onBaccaratSelect = () => this.startBaccarat();
+    this.menu.onHighLowSelect = () => this.startHighLow();
+    this.menu.onSettingsSelect = () => this.settings.show();
+
+    // Default Listeners
+    this.menuBtn.addEventListener('click', () => this.showMenu());
+    this.resetBtn.addEventListener('click', () => this.restartGame());
   }
 
-  init() {}
+  createButton(text: string, id: string, className: string): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.id = id;
+    btn.textContent = text;
+    btn.className = `btn ${className}`;
+    btn.style.display = 'none';
+    this.controlsContainer.appendChild(btn);
+    return btn;
+  }
 
-  setGame(game: any) { this.game = game; }
+  init(): void {
+    this.showMenu();
+    this.createAutoPlayButton();
+  }
+
+  // --- MODE MANAGEMENT ---
 
   setGameMode(mode: 'war' | 'blackjack' | 'baccarat' | 'highlow') {
-    this.mode = mode;
-    this.autoPlay = false;
-    if (this.autoPlayInterval) clearInterval(this.autoPlayInterval);
-
-    this.reset();
-
-    // Hide all controls first
+    // Hide all specific control groups first
     [this.controlsWar, this.controlsBJ, this.controlsBac, this.controlsHL].forEach(c => c?.classList.add('hidden'));
+    
+    // Hide dynamic buttons by default
+    [this.drawBtn, this.hitBtn, this.standBtn, this.autoPlayBtn].forEach(b => {
+        if(b) b.style.display = 'none';
+    });
 
-    const title = document.getElementById('game-title');
+    // Reset Names
     if (this.p1Name) this.p1Name.textContent = 'Player 1';
     if (this.p2Name) this.p2Name.textContent = 'Player 2';
-    if (this.p1Deck) this.p1Deck.style.visibility = 'visible';
-    if (this.p2Deck) this.p2Deck.style.visibility = 'visible';
+    
+    // Visiblity defaults
+    this.p1Deck.style.visibility = 'visible';
+    this.p2Deck.style.visibility = 'visible';
 
-    if (mode === 'war') {
-       this.controlsWar?.classList.remove('hidden');
-       if (title) title.textContent = 'War';
-    } else if (mode === 'blackjack') {
-       this.controlsBJ?.classList.remove('hidden');
-       if (title) title.textContent = 'Blackjack';
-       if (this.p1Name) this.p1Name.textContent = 'You';
-       if (this.p2Name) this.p2Name.textContent = 'Dealer';
-       if (this.p1Deck) this.p1Deck.style.visibility = 'hidden';
-       if (this.p2Deck) this.p2Deck.style.visibility = 'hidden';
-    } else if (mode === 'baccarat') {
-       this.controlsBac?.classList.remove('hidden');
-       if (title) title.textContent = 'Baccarat';
-       if (this.p1Name) this.p1Name.textContent = 'Player';
-       if (this.p2Name) this.p2Name.textContent = 'Banker';
-       if (this.p1Deck) this.p1Deck.style.visibility = 'hidden';
-       if (this.p2Deck) this.p2Deck.style.visibility = 'hidden';
-    } else if (mode === 'highlow') {
-       this.controlsHL?.classList.remove('hidden');
-       if (title) title.textContent = 'High-Low';
-       if (this.p1Name) this.p1Name.textContent = 'Current';
-       if (this.p2Name) this.p2Name.textContent = 'Deck';
-       if (this.p1Deck) this.p1Deck.style.visibility = 'hidden';
-       if (this.p2Deck) this.p2Deck.style.visibility = 'visible'; // Deck pile
+    // Per-mode setup
+    switch (mode) {
+        case 'war':
+            this.controlsWar?.classList.remove('hidden');
+            this.drawBtn.style.display = 'inline-block';
+            if (this.autoPlayBtn) this.autoPlayBtn.style.display = 'inline-block';
+            break;
+        case 'blackjack':
+            this.controlsBJ?.classList.remove('hidden');
+            this.hitBtn.style.display = 'inline-block';
+            this.standBtn.style.display = 'inline-block';
+            if (this.p1Name) this.p1Name.textContent = 'You';
+            if (this.p2Name) this.p2Name.textContent = 'Dealer';
+            this.p1Deck.style.visibility = 'hidden';
+            this.p2Deck.style.visibility = 'hidden';
+            break;
+        case 'baccarat':
+            this.controlsBac?.classList.remove('hidden');
+            if (this.p1Name) this.p1Name.textContent = 'Player';
+            if (this.p2Name) this.p2Name.textContent = 'Banker';
+            this.p1Deck.style.visibility = 'hidden';
+            this.p2Deck.style.visibility = 'hidden';
+            break;
+        case 'highlow':
+            this.controlsHL?.classList.remove('hidden');
+            if (this.p1Name) this.p1Name.textContent = 'Current';
+            if (this.p2Name) this.p2Name.textContent = 'Deck';
+            this.p1Deck.style.visibility = 'hidden';
+            break;
     }
   }
 
-  reset() {
+  showMenu() {
+    this.menu.show();
+    this.container.classList.add('blurred');
+    if (this.gameController.currentGame instanceof WarGame) {
+        (this.gameController.currentGame as WarGame).isAutoPlaying = false;
+    }
+  }
+
+  hideMenu() {
+    this.menu.hide();
+    this.container.classList.remove('blurred');
+  }
+
+  clearBoard() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(c => c.remove());
+    this.msgOverlay.classList.remove('visible');
+    if(this.centerMsg) this.centerMsg.classList.remove('visible');
     this.isAnimating = false;
-    this.msgOverlay?.classList.remove('visible');
-    this.centerMsg?.classList.remove('visible');
-    document.querySelectorAll('.card').forEach(c => c.remove());
+    this.activeListeners = []; 
+    this.resetBtn.style.display = 'inline-block';
+    this.menuBtn.style.display = 'inline-block';
   }
 
-  // --- WAR ---
-
-  handleReset() {
-    this.reset();
-    this.updateScores();
+  restartGame() {
+    if (this.gameController.currentGame instanceof WarGame) this.startWar();
+    else if (this.gameController.currentGame instanceof BlackjackGame) this.startBlackjack();
+    else if (this.gameController.currentGame instanceof BaccaratGame) this.startBaccarat();
+    else if (this.gameController.currentGame instanceof HighLowGame) this.startHighLow();
   }
 
-  toggleAutoPlay() {
-      this.autoPlay = !this.autoPlay;
-      const btn = document.getElementById('autoplay-btn');
-      if (btn) btn.textContent = this.autoPlay ? 'Stop Auto' : 'Auto Play';
+  // --- WAR IMPLEMENTATION ---
 
-      if (this.autoPlay) {
-          this.handleDraw(); // Start immediately
-      }
+  startWar() {
+    this.hideMenu();
+    this.clearBoard();
+    this.setGameMode('war');
+
+    const p1 = new Player('Player 1');
+    const p2 = new Player('Player 2');
+    const game = new WarGame(p1, p2);
+
+    this.gameController.setGame(game);
+    this.setupWarUI(game);
+    game.start();
   }
 
-  async handleDraw() {
-    if (this.mode !== 'war') return;
+  setupWarUI(game: WarGame) {
+    this.drawBtn.onclick = () => {
+        if (!this.isAnimating) {
+            this.audio.init();
+            game.playRound();
+        }
+    };
+
+    game.on('game-start', () => this.updateWarScores(game));
+    game.on('round-result', (result: RoundResult) => this.onWarRoundResult(game, result));
+    game.on('game-over', (data: { winner: Player | null }) => this.showGameOver(data.winner ? `${data.winner.name} Wins!` : 'Tie!'));
+    game.on('autoplay-change', (active: boolean) => {
+        if (this.autoPlayBtn) {
+            this.autoPlayBtn.textContent = active ? 'Stop Auto' : 'Auto Play';
+            this.autoPlayBtn.classList.toggle('active', active);
+        }
+        if (active && !this.isAnimating) game.playRound();
+    });
+  }
+
+  async onWarRoundResult(game: WarGame, result: RoundResult) {
     if (this.isAnimating) return;
-
-    const game = this.game as WarGame;
-    const result = game.playRound();
-    if (!result) return;
-
     this.isAnimating = true;
-    const drawBtn = document.getElementById('draw-btn') as HTMLButtonElement;
-    if (drawBtn) drawBtn.disabled = true;
+    this.drawBtn.disabled = true;
 
-    if (result.gameEnded && !result.p1Card) {
-        if (result.gameWinner) this.showGameOver(result.gameWinner.name + ' Wins!');
-        this.isAnimating = false;
-        if (drawBtn) drawBtn.disabled = false;
-        this.autoPlay = false;
-        return;
-    }
+    const p1CardNode = this.createCardNode(result.p1Card);
+    const p2CardNode = this.createCardNode(result.p2Card);
 
-    const p1CardNode = this.createCardNode(result.p1Card!);
-    const p2CardNode = this.createCardNode(result.p2Card!);
-
-    if (this.p1Deck) this.placeAt(p1CardNode, this.p1Deck);
-    if (this.p2Deck) this.placeAt(p2CardNode, this.p2Deck);
-
-    this.container?.appendChild(p1CardNode);
-    this.container?.appendChild(p2CardNode);
-    p1CardNode.offsetHeight;
+    this.placeAt(p1CardNode, this.p1Deck);
+    this.placeAt(p2CardNode, this.p2Deck);
+    this.container.appendChild(p1CardNode);
+    this.container.appendChild(p2CardNode);
+    void p1CardNode.offsetHeight; // Force reflow
 
     this.audio.playDeal();
     await Promise.all([
-      this.p1Slot && this.moveTo(p1CardNode, this.p1Slot),
-      this.p2Slot && this.moveTo(p2CardNode, this.p2Slot)
+      this.moveTo(p1CardNode, this.p1Slot),
+      this.moveTo(p2CardNode, this.p2Slot)
     ]);
 
     this.audio.playFlip();
@@ -176,177 +251,289 @@ export class UI {
     await this.wait(800);
 
     const activeCards = [p1CardNode, p2CardNode];
-    if (result.isWar) await this.animateWar(result.warEvents, activeCards);
-
-    if (result.gameEnded && result.gameWinner) {
-      this.showGameOver(result.gameWinner.name + ' Wins!');
-    } else {
-      let winnerPlayer = result.winner;
-      if (result.isWar && result.warEvents.length > 0) {
-          winnerPlayer = result.warEvents[result.warEvents.length - 1].winner;
-      }
-      if (winnerPlayer) {
-          const targetDeck = winnerPlayer === game.player1 ? this.p1Deck : this.p2Deck;
-          this.audio.playRoundWin();
-          if (targetDeck) await this.animateToDeck(activeCards, targetDeck);
-      }
+    if (result.isWar) {
+        await this.animateWar(result.warEvents, activeCards);
     }
 
-    this.updateScores();
+    if (!result.gameEnded) {
+        let roundWinner = result.winner;
+        if (result.isWar && result.warEvents.length > 0) {
+            roundWinner = result.warEvents[result.warEvents.length - 1].winner;
+        }
+        if (roundWinner) {
+            const targetDeck = roundWinner === game.player1 ? this.p1Deck : this.p2Deck;
+            this.audio.playRoundWin();
+            await this.animateToDeck(activeCards, targetDeck);
+        }
+    }
+
+    this.updateWarScores(game);
 
     if (!result.gameEnded) {
         this.isAnimating = false;
-        if (drawBtn) drawBtn.disabled = false;
-        if (this.autoPlay) setTimeout(() => this.handleDraw(), 500 * this.speedModifier);
-    }
-  }
-
-  async animateWar(warEvents: WarEvent[], activeCards: HTMLElement[]) {
-    this.warBadge?.classList.add('visible');
-    this.audio.playWar();
-    await this.wait(1000);
-    this.warBadge?.classList.remove('visible');
-
-    for (const event of warEvents) {
-        for (let i = 0; i < 3; i++) {
-            if (i >= event.p1Hidden.length) break;
-            const c1 = this.createCardNode(event.p1Hidden[i]);
-            const c2 = this.createCardNode(event.p2Hidden[i]);
-            if (this.p1Deck) this.placeAt(c1, this.p1Deck);
-            if (this.p2Deck) this.placeAt(c2, this.p2Deck);
-            this.container?.appendChild(c1);
-            this.container?.appendChild(c2);
-            activeCards.push(c1, c2);
-
-            const offset = (i+1)*10;
-            if (this.p1Slot) this.moveTo(c1, this.p1Slot, offset, offset);
-            if (this.p2Slot) this.moveTo(c2, this.p2Slot, offset, offset);
-            this.audio.playDeal();
-            await this.wait(150);
+        this.drawBtn.disabled = false;
+        if (game.isAutoPlaying) {
+            await this.wait(500);
+            game.playRound();
         }
-        const up1 = this.createCardNode(event.p1Up);
-        const up2 = this.createCardNode(event.p2Up);
-        if (this.p1Deck) this.placeAt(up1, this.p1Deck);
-        if (this.p2Deck) this.placeAt(up2, this.p2Deck);
-        this.container?.appendChild(up1);
-        this.container?.appendChild(up2);
-        activeCards.push(up1, up2);
-
-        if (this.p1Slot) this.moveTo(up1, this.p1Slot, 50, 50);
-        if (this.p2Slot) this.moveTo(up2, this.p2Slot, 50, 50);
-        await this.wait(300);
-        this.audio.playFlip();
-        up1.classList.add('flipped');
-        up2.classList.add('flipped');
-        await this.wait(1000);
     }
   }
 
-  async animateToDeck(cards: HTMLElement[], targetDeck: HTMLElement) {
-      await Promise.all(cards.map(c => this.moveTo(c, targetDeck).then(() => {
-          c.style.opacity = '0';
-          setTimeout(() => c.remove(), 500);
-      })));
+  updateWarScores(game: WarGame) {
+    this.p1Score.textContent = `Wins: ${game.player1.wins} | Cards: ${game.player1.cardCount}`;
+    this.p2Score.textContent = `Wins: ${game.player2.wins} | Cards: ${game.player2.cardCount}`;
   }
 
-  // --- BLACKJACK ---
+  // --- BLACKJACK IMPLEMENTATION ---
 
-  updateBlackjackState(state: BlackjackGameState) {
-    this.renderGenericHand(state.dealerHand, this.p2Slot, 30);
-    this.renderGenericHand(state.playerHand, this.p1Slot, 30);
+  startBlackjack() {
+    this.hideMenu();
+    this.clearBoard();
+    this.setGameMode('blackjack');
 
-    if (this.p1Score) this.p1Score.textContent = `Score: ${state.playerValue}`;
-    if (this.p2Score) this.p2Score.textContent = `Score: ${state.dealerValue}`;
+    const game = new BlackjackGame();
+    this.gameController.setGame(game);
+    this.setupBlackjackUI(game);
+    game.start();
+  }
 
-    const hit = document.getElementById('btn-hit');
-    const stand = document.getElementById('btn-stand');
-    const deal = document.getElementById('btn-deal');
+  setupBlackjackUI(game: BlackjackGame) {
+    this.hitBtn.onclick = () => { this.audio.init(); game.hit(); };
+    this.standBtn.onclick = () => { this.audio.init(); game.stand(); };
 
-    if (state.state === 'READY' || state.state === 'GAME_OVER') {
-        hit?.classList.add('hidden'); stand?.classList.add('hidden'); deal?.classList.remove('hidden');
+    game.on('deal', (data) => {
+        this.renderBlackjackHands(game, data.playerHand, data.dealerHand);
+        this.updateBlackjackScores(game);
+    });
+
+    game.on('update-hand', (data) => {
+        this.renderHand(data.playerHand, this.p1Slot, 30);
+        this.updateBlackjackScores(game);
+    });
+
+    game.on('dealer-reveal', (data) => {
+        this.renderHand(data.dealerHand, this.p2Slot, 30);
+        this.updateBlackjackScores(game);
+    });
+
+    game.on('dealer-hit', (data) => {
+        this.audio.playDeal();
+        this.renderHand(data.dealerHand, this.p2Slot, 30);
+        this.updateBlackjackScores(game);
+    });
+
+    game.on('game-over', (data) => {
+        this.renderHand(data.dealerHand, this.p2Slot, 30);
+        this.updateBlackjackScores(game);
+        this.showGameOver(data.message);
+    });
+  }
+
+  renderBlackjackHands(game: BlackjackGame, pHand: Card[], dHand: (Card|null)[]) {
+    this.renderHand(pHand, this.p1Slot, 30);
+    this.renderHand(dHand, this.p2Slot, 30);
+    this.audio.playDeal();
+  }
+
+  updateBlackjackScores(game: BlackjackGame) {
+    const pScore = game.calculateScore(game.playerHand);
+    this.p1Score.textContent = `Score: ${pScore}`;
+    if (game.state === 'playing') {
+        this.p2Score.textContent = `Score: ?`;
     } else {
-        hit?.classList.remove('hidden'); stand?.classList.remove('hidden'); deal?.classList.add('hidden');
+        const dScore = game.calculateScore(game.dealerHand);
+        this.p2Score.textContent = `Score: ${dScore}`;
     }
-
-    this.showMessage(state.message);
-    if (state.state === 'GAME_OVER' && state.result === 'PLAYER_WIN') this.audio.playRoundWin();
   }
 
-  // --- BACCARAT ---
+  // --- BACCARAT IMPLEMENTATION ---
 
-  updateBaccaratState(state: BaccaratGameState) {
-    this.renderGenericHand(state.bankerHand, this.p2Slot, 30);
-    this.renderGenericHand(state.playerHand, this.p1Slot, 30);
+  startBaccarat() {
+    this.hideMenu();
+    this.clearBoard();
+    this.setGameMode('baccarat');
+    
+    const game = new BaccaratGame();
+    this.gameController.setGame(game);
+    
+    const dealBtn = document.getElementById('btn-bac-deal');
+    if(dealBtn) dealBtn.onclick = () => game.playRound();
 
-    if (this.p1Score) this.p1Score.textContent = `Score: ${state.playerScore}`;
-    if (this.p2Score) this.p2Score.textContent = `Score: ${state.bankerScore}`;
-
-    const deal = document.getElementById('btn-bac-deal');
-    if (deal) deal.classList.toggle('hidden', state.state === 'PLAYING');
-
-    this.showMessage(state.message);
-    if (state.result === 'PLAYER_WIN' || state.result === 'TIE') this.audio.playRoundWin(); // Tie is good?
+    game.on('update', (state: BaccaratGameState) => {
+        this.renderHand(state.playerHand, this.p1Slot, 30);
+        this.renderHand(state.bankerHand, this.p2Slot, 30);
+        this.p1Score.textContent = `Score: ${state.playerScore}`;
+        this.p2Score.textContent = `Score: ${state.bankerScore}`;
+        if(state.message) this.showMessage(state.message);
+    });
   }
 
-  // --- HIGH LOW ---
+  // --- HIGH LOW IMPLEMENTATION ---
 
-  updateHighLowState(state: HighLowGameState) {
-    // Current Card (Player slot)
-    const existing = document.querySelectorAll('.card');
+  startHighLow() {
+    this.hideMenu();
+    this.clearBoard();
+    this.setGameMode('highlow');
+
+    const game = new HighLowGame();
+    this.gameController.setGame(game);
+
+    const highBtn = document.getElementById('btn-higher');
+    const lowBtn = document.getElementById('btn-lower');
+    if(highBtn) highBtn.onclick = () => game.guess('higher');
+    if(lowBtn) lowBtn.onclick = () => game.guess('lower');
+
+    game.on('update', (state: HighLowGameState) => {
+        // Clear slots
+        const existing = document.querySelectorAll('.card');
+        existing.forEach(e => e.remove());
+
+        if (state.currentCard) {
+            const el = this.createCardNode(state.currentCard);
+            el.classList.add('flipped');
+            this.container?.appendChild(el);
+            this.placeAt(el, this.p1Slot);
+        }
+        
+        this.p1Score.textContent = `Score: ${state.score}`;
+        this.p2Score.textContent = `Cards Left: ${game.deck.length}`;
+        
+        if (state.message) this.showMessage(state.message);
+        if (state.result === 'WIN') this.audio.playGameWin();
+    });
+
+    game.start();
+  }
+
+  // --- COMMON HELPERS ---
+
+  renderHand(hand: (Card|null)[], targetSlot: HTMLElement, offsetStep: number) {
+    const slotId = targetSlot.id;
+    // Clear existing cards for this specific slot
+    const existing = document.querySelectorAll(`.card[data-slot="${slotId}"]`);
     existing.forEach(e => e.remove());
 
-    if (this.p1Slot && state.currentCard) {
-        const el = this.createCardNode(state.currentCard);
-        el.classList.add('flipped');
-        this.container?.appendChild(el);
-        this.placeAt(el, this.p1Slot);
-    }
+    hand.forEach((card, index) => {
+        let cardNode: HTMLElement;
+        if (card) {
+            cardNode = this.createCardNode(card);
+            cardNode.classList.add('flipped');
+        } else {
+            // Face down card
+            const dummy = new Card('A', 'spades'); 
+            cardNode = this.createCardNode(dummy); 
+        }
 
-    // If Result card exists (Loss/Next), show in Deck slot temporarily
-    if (state.nextCard && this.p2Slot) {
-        const el = this.createCardNode(state.nextCard);
-        el.classList.add('flipped');
-        this.container?.appendChild(el);
-        this.placeAt(el, this.p2Slot);
-    }
+        cardNode.dataset.slot = slotId;
+        this.container.appendChild(cardNode);
+        this.placeAt(cardNode, targetSlot);
 
-    if (this.p1Score) this.p1Score.textContent = `Score: ${state.score}`;
-    if (this.p2Score) this.p2Score.textContent = `Cards Left: ${this.game?.deck.length}`;
+        // Calculate offset to center the hand
+        const offsetX = (index - (hand.length-1)/2) * offsetStep;
+        const rect = targetSlot.getBoundingClientRect();
+        const containerRect = this.container.getBoundingClientRect();
 
-    const higher = document.getElementById('btn-higher');
-    const lower = document.getElementById('btn-lower');
-    const start = document.getElementById('btn-hl-start');
-
-    if (state.state === 'PLAYING') {
-        higher?.classList.remove('hidden'); lower?.classList.remove('hidden'); start?.classList.add('hidden');
-    } else {
-        higher?.classList.add('hidden'); lower?.classList.add('hidden'); start?.classList.remove('hidden');
-    }
-
-    this.showMessage(state.message);
-    if (state.result === 'WIN') this.audio.playGameWin();
+        // +30 to approx center card in slot width
+        cardNode.style.left = (rect.left - containerRect.left + offsetX + 30) + 'px'; 
+        cardNode.style.top = (rect.top - containerRect.top) + 'px';
+    });
   }
 
-  // --- HELPERS ---
-
-  renderGenericHand(cards: (Card | null)[], slot: HTMLElement | null, offsetStep: number) {
-      // Lazy clear: could be optimized to diff
-      const existing = document.querySelectorAll('.card');
-      existing.forEach(e => {
-          // simple check: if in War mode, handleDraw manages removal. In others, we clear.
-          if (this.mode !== 'war') e.remove();
-      });
-      if (this.mode === 'war') return; // War handles its own DOM
-
-      cards.forEach((card, i) => {
-          const el = this.createCardNode(card || undefined);
-          this.container?.appendChild(el);
-          if (slot) this.placeAt(el, slot, (i * offsetStep) - 40, 0);
-          if (card) setTimeout(() => el.classList.add('flipped'), 50);
-      });
+  createCardNode(card: Card): HTMLElement {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML = `
+      <div class="card-face card-back">${Card.getBackSVG()}</div>
+      <div class="card-face card-front">${card.getSVG()}</div>
+    `;
+    return el;
   }
 
-  showMessage(msg: string) {
+  private createAutoPlayButton() {
+    if (this.controlsContainer) {
+      this.autoPlayBtn = document.createElement('button');
+      this.autoPlayBtn.id = 'autoplay-btn';
+      this.autoPlayBtn.textContent = 'Auto Play';
+      this.autoPlayBtn.className = 'btn secondary';
+      this.autoPlayBtn.style.display = 'none';
+      this.autoPlayBtn.addEventListener('click', () => {
+          if (this.gameController.currentGame instanceof WarGame) {
+              (this.gameController.currentGame as WarGame).toggleAutoPlay();
+          }
+      });
+      this.controlsContainer.appendChild(this.autoPlayBtn);
+    }
+  }
+
+  private async animateWar(warEvents: WarEvent[], activeCards: HTMLElement[]) {
+    this.warBadge.classList.add('visible');
+    this.audio.playWar();
+    await this.wait(1000);
+    this.warBadge.classList.remove('visible');
+
+    for (const event of warEvents) {
+      for (let i = 0; i < 3; i++) {
+        if (i >= event.p1Hidden.length) break;
+        const c1 = this.createCardNode(event.p1Hidden[i]);
+        const c2 = this.createCardNode(event.p2Hidden[i]);
+
+        this.placeAt(c1, this.p1Deck);
+        this.placeAt(c2, this.p2Deck);
+        this.container.appendChild(c1);
+        this.container.appendChild(c2);
+        activeCards.push(c1, c2);
+
+        const offset = (i + 1) * 10;
+        this.moveTo(c1, this.p1Slot, offset, offset);
+        this.moveTo(c2, this.p2Slot, offset, offset);
+
+        this.audio.playDeal();
+        await this.wait(200);
+      }
+
+      const up1 = this.createCardNode(event.p1Up);
+      const up2 = this.createCardNode(event.p2Up);
+
+      this.placeAt(up1, this.p1Deck);
+      this.placeAt(up2, this.p2Deck);
+      this.container.appendChild(up1);
+      this.container.appendChild(up2);
+      activeCards.push(up1, up2);
+
+      this.moveTo(up1, this.p1Slot, 50, 50);
+      this.moveTo(up2, this.p2Slot, 50, 50);
+      await this.wait(300);
+
+      this.audio.playFlip();
+      up1.classList.add('flipped');
+      up2.classList.add('flipped');
+
+      await this.wait(1000);
+    }
+  }
+
+  private async animateToDeck(cards: HTMLElement[], targetDeck: HTMLElement) {
+    const promises = cards.map(c => {
+      return this.moveTo(c, targetDeck).then(() => {
+        c.style.opacity = '0';
+        setTimeout(() => c.remove(), 500);
+      });
+    });
+    await Promise.all(promises);
+  }
+
+  private showGameOver(message: string) {
+    this.msgOverlay.innerHTML = `<h1>Game Over!</h1><h2>${message}</h2><p>Click reset (or New Game) to play again.</p>`;
+    this.msgOverlay.classList.add('visible');
+    if (this.settings.soundEnabled) {
+        this.audio.playGameWin();
+    }
+    if(this.drawBtn) this.drawBtn.disabled = true;
+    if(this.hitBtn) this.hitBtn.disabled = true;
+    if(this.standBtn) this.standBtn.disabled = true;
+  }
+
+  private showMessage(msg: string) {
       if (!this.centerMsg) return;
       if (msg) {
           this.centerMsg.textContent = msg;
@@ -356,65 +543,31 @@ export class UI {
       }
   }
 
-  updateScores() {
-    if (this.mode === 'war') {
-        const game = this.game as WarGame;
-        if (this.p1Score) this.p1Score.textContent = `Wins: ${game.player1.wins} | Cards: ${game.player1.cardCount}`;
-        if (this.p2Score) this.p2Score.textContent = `Wins: ${game.player2.wins} | Cards: ${game.player2.cardCount}`;
-    }
-  }
-
-  showGameOver(msg: string) {
-      const title = document.getElementById('msg-title');
-      const body = document.getElementById('msg-body');
-      if (title) title.textContent = "Game Over";
-      if (body) body.textContent = msg;
-      this.msgOverlay?.classList.add('visible');
-      this.audio.playGameWin();
-
-      const btn = document.getElementById('btn-play-again');
-      if (btn) btn.onclick = () => {
-          this.msgOverlay?.classList.remove('visible');
-          // Reset current game
-          if (this.mode === 'war') (this.game as WarGame).start();
-          else if (this.mode === 'highlow') this.updateHighLowState((this.game as HighLowGame).start());
-          // others auto reset on deal
-          this.reset();
-          if (this.mode === 'war') this.updateScores();
-      };
-  }
-
-  createCardNode(card: Card | undefined) {
-    const el = document.createElement('div');
-    el.className = 'card';
-    const svgs = card ? card.getSVG() : '';
-    el.innerHTML = `<div class="card-face card-back">${Card.getBackSVG()}</div><div class="card-face card-front">${svgs}</div>`;
-    return el;
-  }
-
-  placeAt(element: HTMLElement, target: HTMLElement, offsetX = 0, offsetY = 0) {
+  private placeAt(element: HTMLElement, target: HTMLElement) {
     const rect = target.getBoundingClientRect();
-    const containerRect = this.container?.getBoundingClientRect();
-    if (containerRect) {
-        element.style.left = (rect.left - containerRect.left + offsetX) + 'px';
-        element.style.top = (rect.top - containerRect.top + offsetY) + 'px';
-    }
+    const containerRect = this.container.getBoundingClientRect();
+    element.style.left = (rect.left - containerRect.left) + 'px';
+    element.style.top = (rect.top - containerRect.top) + 'px';
   }
 
-  moveTo(element: HTMLElement, target: HTMLElement, offsetX = 0, offsetY = 0) {
+  private moveTo(element: HTMLElement, target: HTMLElement, offsetX = 0, offsetY = 0) {
     return new Promise<void>(resolve => {
-        const rect = target.getBoundingClientRect();
-        const containerRect = this.container?.getBoundingClientRect();
-        if (containerRect) {
-            element.style.left = (rect.left - containerRect.left + offsetX) + 'px';
-            element.style.top = (rect.top - containerRect.top + offsetY) + 'px';
-        }
-        element.addEventListener('transitionend', () => resolve(), { once: true });
-        setTimeout(resolve, 650);
+      const rect = target.getBoundingClientRect();
+      const containerRect = this.container.getBoundingClientRect();
+      const duration = 650 / this.settings.animationSpeed;
+
+      element.style.transition = `transform ${duration}ms, left ${duration}ms, top ${duration}ms`;
+      element.style.left = (rect.left - containerRect.left + offsetX) + 'px';
+      element.style.top = (rect.top - containerRect.top + offsetY) + 'px';
+
+      this.audio.enabled = this.settings.soundEnabled;
+
+      element.addEventListener('transitionend', () => resolve(), { once: true });
+      setTimeout(resolve, duration);
     });
   }
 
-  wait(ms: number) {
-      return new Promise<void>(resolve => setTimeout(resolve, ms * this.speedModifier));
+  private wait(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms / this.settings.animationSpeed));
   }
 }

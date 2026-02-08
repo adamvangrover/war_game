@@ -6,7 +6,7 @@ export const RANKS = [
 ] as const;
 export type Rank = typeof RANKS[number];
 
-export const WAR_VALUES: Record<Rank, number> = {
+export const VALUES: Record<Rank, number> = {
   '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
   'J': 11, 'Q': 12, 'K': 13, 'A': 14
 };
