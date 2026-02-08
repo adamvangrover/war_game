@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Card } from '../src/Card.js';
-import { Deck } from '../src/Deck.js';
-import { Player } from '../src/Player.js';
-import { Game } from '../src/Game.js';
+import { Card } from '../src/core/Card';
+import { Deck } from '../src/core/Deck';
+import { Player } from '../src/core/Player';
+import { WarGame, RoundResult } from '../src/engine/WarGame';
 
 describe('Deck', () => {
   it('should initialize with 52 cards', () => {
@@ -26,24 +26,26 @@ describe('Player', () => {
     expect(player.cardCount).toBe(2);
 
     const played = player.playCard();
-    expect(played.rank).toBe('2');
+    expect(played?.rank).toBe('2');
     expect(player.cardCount).toBe(1);
 
-    player.receiveCards([played]);
+    player.receiveCards([played!]);
     expect(player.cardCount).toBe(2);
     // played card goes to bottom
     const next = player.playCard();
-    expect(next.rank).toBe('3');
+    expect(next?.rank).toBe('3');
   });
 });
 
-describe('Game', () => {
-  let p1, p2, game;
+describe('WarGame', () => {
+  let p1: Player;
+  let p2: Player;
+  let game: WarGame;
 
   beforeEach(() => {
     p1 = new Player('P1');
     p2 = new Player('P2');
-    game = new Game(p1, p2);
+    game = new WarGame(p1, p2);
   });
 
   it('should play a simple round where P1 wins', () => {
@@ -52,8 +54,13 @@ describe('Game', () => {
     p2.setHand([new Card('K', 'hearts')]); // Value 13
     game.gameInProgress = true;
 
-    const result = game.playRound();
-    expect(result.winner).toBe(p1);
+    let result: RoundResult | undefined;
+    game.on('round-result', (r: RoundResult) => { result = r; });
+
+    game.playRound();
+
+    expect(result).toBeDefined();
+    expect(result!.winner).toBe(p1);
     expect(p1.cardCount).toBe(2);
     expect(p2.cardCount).toBe(0);
   });
@@ -76,10 +83,14 @@ describe('Game', () => {
     p2.setHand(p2Cards);
     game.gameInProgress = true;
 
-    const result = game.playRound();
-    expect(result.isWar).toBe(true);
-    expect(result.warEvents.length).toBe(1);
-    expect(result.warEvents[0].winner).toBe(p1);
+    let result: RoundResult | undefined;
+    game.on('round-result', (r: RoundResult) => { result = r; });
+
+    game.playRound();
+
+    expect(result!.isWar).toBe(true);
+    expect(result!.warEvents.length).toBe(1);
+    expect(result!.warEvents[0].winner).toBe(p1);
 
     // P1 should have all 10 cards
     expect(p1.cardCount).toBe(10);
@@ -97,9 +108,13 @@ describe('Game', () => {
       p2.setHand(p2Cards);
       game.gameInProgress = true;
 
-      const result = game.playRound();
-      expect(result.isWar).toBe(true);
-      expect(result.gameEnded).toBe(true);
-      expect(result.gameWinner).toBe(p2);
+      let result: RoundResult | undefined;
+      game.on('round-result', (r: RoundResult) => { result = r; });
+
+      game.playRound();
+
+      expect(result!.isWar).toBe(true);
+      expect(result!.gameEnded).toBe(true);
+      expect(result!.gameWinner).toBe(p2);
   });
 });
