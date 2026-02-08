@@ -42,7 +42,10 @@ describe('BlackjackGame', () => {
   it('should handle hit', () => {
     // Disable shuffle to ensure predictable deal (avoiding instant Blackjack)
     // Ordered deck: 2, 3, 4, 5...
-    game.deck.shuffle = () => {}; 
+    game.deck.shuffle = () => {
+      // Reverse deck so pop() draws 2, 3, 4, 5...
+      (game.deck as any).cards.reverse();
+    };
     game.start();
 
     expect(game.state).toBe('playing');

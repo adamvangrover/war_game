@@ -2,8 +2,9 @@ import { Deck } from '../core/Deck.js';
 import { BLACKJACK_VALUES } from '../core/constants.js';
 import { Player } from '../core/Player.js';
 import { Card } from '../core/Card.js';
+import { EventEmitter } from '../utils/EventEmitter.js';
 
-export type BlackjackState = 'READY' | 'PLAYER_TURN' | 'DEALER_TURN' | 'GAME_OVER';
+export type BlackjackState = 'READY' | 'playing' | 'DEALER_TURN' | 'GAME_OVER';
 export type BlackjackResult = 'PLAYER_WIN' | 'DEALER_WIN' | 'PUSH' | null;
 
 export interface BlackjackGameState {
@@ -16,7 +17,7 @@ export interface BlackjackGameState {
   result: BlackjackResult;
 }
 
-export class BlackjackGame {
+export class BlackjackGame extends EventEmitter {
   public deck: Deck;
   public player: Player;
   public dealer: Player;
@@ -25,12 +26,25 @@ export class BlackjackGame {
   public result: BlackjackResult;
 
   constructor() {
+    super();
     this.deck = new Deck();
     this.player = new Player('Player');
     this.dealer = new Player('Dealer');
     this.state = 'READY';
     this.message = '';
     this.result = null;
+  }
+
+  calculateScore(hand: Card[]): number {
+    return this.getHandValue(hand);
+  }
+
+  get playerHand(): Card[] {
+    return this.player.hand;
+  }
+
+  get dealerHand(): (Card | null)[] {
+    return this.dealer.hand;
   }
 
   start(): BlackjackGameState {
@@ -40,7 +54,9 @@ export class BlackjackGame {
     this.state = 'READY';
     this.message = '';
     this.result = null;
-    return this.getState();
+
+    // Auto-deal on start to match legacy behavior/tests
+    return this.deal();
   }
 
   deal(): BlackjackGameState {
@@ -51,7 +67,7 @@ export class BlackjackGame {
     this.player.hand = [this.deck.draw()!, this.deck.draw()!];
     this.dealer.hand = [this.deck.draw()!, this.deck.draw()!];
 
-    this.state = 'PLAYER_TURN';
+    this.state = 'playing';
 
     // Check for Blackjack immediately
     const pScore = this.getHandValue(this.player.hand);
@@ -65,11 +81,13 @@ export class BlackjackGame {
       }
     }
 
-    return this.getState();
+    const state = this.getState();
+    this.emit('deal', state);
+    return state;
   }
 
   hit(): BlackjackGameState {
-    if (this.state !== 'PLAYER_TURN') return this.getState();
+    if (this.state !== 'playing') return this.getState();
 
     const card = this.deck.draw();
     if (card) this.player.hand.push(card);
@@ -85,7 +103,7 @@ export class BlackjackGame {
   }
 
   stand(): BlackjackGameState {
-    if (this.state !== 'PLAYER_TURN') return this.getState();
+    if (this.state !== 'playing') return this.getState();
 
     this.state = 'DEALER_TURN';
     this.playDealer();
@@ -93,7 +111,7 @@ export class BlackjackGame {
   }
 
   playDealer(): void {
-    let score = this.getHandValue(this.dealer.hand);
+    let score = this.getHandValue(this.dealer.hand as Card[]);
 
     // Hit on soft 17 is standard in some casinos, strict 17 in others.
     // Here we implement: Dealer must draw to 16 and stand on all 17s.
@@ -101,7 +119,7 @@ export class BlackjackGame {
       const card = this.deck.draw();
       if (card) {
           this.dealer.hand.push(card);
-          score = this.getHandValue(this.dealer.hand);
+          score = this.getHandValue(this.dealer.hand as Card[]);
       } else {
           break; // Deck empty
       }
@@ -127,13 +145,21 @@ export class BlackjackGame {
 
     if (result === 'PLAYER_WIN') this.player.wins++;
     else if (result === 'DEALER_WIN') this.dealer.wins++;
+
+    this.emit('game-over', {
+        winner: result === 'PLAYER_WIN' ? this.player : (result === 'DEALER_WIN' ? this.dealer : null),
+        dealerHand: this.dealer.hand,
+        result,
+        message: this.message
+    });
   }
 
-  getHandValue(hand: Card[]): number {
+  getHandValue(hand: (Card | null)[]): number {
     let value = 0;
     let aces = 0;
 
     for (const card of hand) {
+      if (!card) continue;
       const v = BLACKJACK_VALUES[card.rank];
       value += v;
       if (card.rank === 'A') aces++;
@@ -152,12 +178,12 @@ export class BlackjackGame {
       state: this.state,
       playerHand: this.player.hand,
       // Hide first dealer card if player turn
-      dealerHand: this.state === 'PLAYER_TURN' && this.dealer.hand.length > 0
+      dealerHand: this.state === 'playing' && this.dealer.hand.length > 0
           ? [this.dealer.hand[0], null]
           : this.dealer.hand,
       playerValue: this.getHandValue(this.player.hand),
-      dealerValue: this.state === 'PLAYER_TURN' && this.dealer.hand.length > 0
-          ? BLACKJACK_VALUES[this.dealer.hand[0].rank]
+      dealerValue: this.state === 'playing' && this.dealer.hand.length > 0
+          ? BLACKJACK_VALUES[this.dealer.hand[0]!.rank]
           : this.getHandValue(this.dealer.hand),
       message: this.message,
       result: this.result
