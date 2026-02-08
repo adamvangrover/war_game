@@ -3,57 +3,135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>War Card Game - Upgraded</title>
-  <link rel="stylesheet" href="src/styles.css">
+  <title>Card Game Suite</title>
+  <link rel="stylesheet" href="src/ui/styles.css">
+  <link rel="manifest" href="/manifest.webmanifest">
 </head>
 <body>
 
+  <!-- Main Menu -->
+  <div id="main-menu" class="overlay visible">
+    <div class="menu-content">
+      <h1>Card Game Suite</h1>
+      <div class="game-grid">
+        <button id="btn-war" class="menu-btn">War</button>
+        <button id="btn-blackjack" class="menu-btn">Blackjack</button>
+        <button id="btn-baccarat" class="menu-btn">Baccarat</button>
+        <button id="btn-highlow" class="menu-btn">High-Low</button>
+      </div>
+      <button id="btn-settings-open" class="secondary-btn">Settings</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="overlay">
+    <div class="modal-content">
+      <h2>Settings</h2>
+      <div class="setting-row">
+        <label>Sound Effects</label>
+        <input type="checkbox" id="setting-sound" checked>
+      </div>
+      <div class="setting-row">
+        <label>Animation Speed</label>
+        <select id="setting-speed">
+          <option value="slow">Slow</option>
+          <option value="normal" selected>Normal</option>
+          <option value="fast">Fast</option>
+        </select>
+      </div>
+      <button id="btn-settings-close" class="menu-btn">Close</button>
+    </div>
+  </div>
+
   <div id="game-container">
-    <!-- Top Player (Player 2) -->
+    <!-- Header/Status Bar -->
+    <div class="game-header">
+      <button id="btn-back-menu" class="icon-btn">☰ Menu</button>
+      <button id="btn-rules" class="icon-btn">?</button>
+      <div id="game-title">War</div>
+    </div>
+
+    <!-- Top Player Zone (P2 / Dealer / Banker) -->
     <div class="player-zone" id="p2-zone">
       <div class="player-info">
-        <h3>Player 2</h3>
+        <h3 id="p2-name">Player 2</h3>
         <div id="p2-score">Wins: 0 | Cards: 26</div>
-        <div id="p2-rounds">Rounds: 0</div>
+        <div id="p2-status" class="status-pill hidden"></div>
       </div>
       <div class="deck-container" id="p2-deck">
-        <!-- Deck visual placeholder -->
         <div class="card-face card-back" style="border-radius: 10px;"></div>
       </div>
     </div>
 
-    <!-- Battle Zone -->
+    <!-- Battle Zone / Table Center -->
     <div class="battle-zone">
       <div class="card-slot" id="p2-slot"></div>
       <div class="card-slot" id="p1-slot"></div>
 
+      <div id="center-message" class="center-message"></div>
       <div id="war-badge" class="war-badge">WAR!</div>
     </div>
 
-    <!-- Bottom Player (Player 1) -->
+    <!-- Bottom Player Zone (P1 / You) -->
     <div class="player-zone" id="p1-zone">
       <div class="player-info">
-        <h3>Player 1</h3>
+        <h3 id="p1-name">Player 1</h3>
         <div id="p1-score">Wins: 0 | Cards: 26</div>
-        <div id="p1-rounds">Rounds: 0</div>
+        <div id="p1-status" class="status-pill hidden"></div>
       </div>
       <div class="deck-container" id="p1-deck">
-        <!-- Deck visual placeholder -->
         <div class="card-face card-back" style="border-radius: 10px;"></div>
       </div>
     </div>
 
+    <!-- Game Controls (Dynamic) -->
     <div id="controls">
-      <button id="draw-btn">Draw Cards</button>
-      <button id="reset-btn">New Game</button>
+      <!-- War Controls -->
+      <div id="controls-war" class="control-group">
+        <button id="draw-btn" class="action-btn">Draw Cards</button>
+        <button id="autoplay-btn" class="action-btn yellow">Auto Play</button>
+      </div>
+
+      <!-- Blackjack Controls -->
+      <div id="controls-blackjack" class="control-group hidden">
+         <button id="btn-hit" class="action-btn yellow">Hit</button>
+         <button id="btn-stand" class="action-btn red">Stand</button>
+         <button id="btn-deal" class="action-btn green">Deal</button>
+      </div>
+
+      <!-- Baccarat Controls -->
+      <div id="controls-baccarat" class="control-group hidden">
+         <button id="btn-bac-deal" class="action-btn green">Deal</button>
+      </div>
+
+      <!-- High-Low Controls -->
+      <div id="controls-highlow" class="control-group hidden">
+         <button id="btn-higher" class="action-btn green">Higher</button>
+         <button id="btn-lower" class="action-btn red">Lower</button>
+         <button id="btn-hl-start" class="action-btn yellow">Start</button>
+      </div>
+
+      <button id="reset-btn" class="secondary-btn">Reset</button>
     </div>
   </div>
 
-  <div id="message-overlay">
-    <h1>Game Over</h1>
-    <button onclick="document.getElementById('reset-btn').click()">Play Again</button>
+  <div id="message-overlay" class="overlay">
+    <div class="modal-content">
+      <h1 id="msg-title">Game Over</h1>
+      <h2 id="msg-body">Player 1 Wins!</h2>
+      <button id="btn-play-again" class="menu-btn">Play Again</button>
+    </div>
   </div>
 
-  <script type="module" src="src/main.js"></script>
+  <!-- Rules Modal -->
+  <div id="rules-modal" class="overlay">
+    <div class="modal-content">
+      <h2>How to Play</h2>
+      <div id="rules-body" style="text-align: left; margin-bottom: 20px; line-height: 1.5;"></div>
+      <button id="btn-rules-close" class="menu-btn">Close</button>
+    </div>
+  </div>
+
+  <script type="module" src="src/app/main.ts"></script>
 </body>
 </html>

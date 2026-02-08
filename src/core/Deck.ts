@@ -2,12 +2,13 @@ import { Card } from './Card.js';
 import { RANKS, SUITS } from './constants.js';
 
 export class Deck {
+  public cards: Card[] = [];
+
   constructor() {
-    this.cards = [];
     this.initialize();
   }
 
-  initialize() {
+  initialize(): void {
     this.cards = [];
     for (const suit of SUITS) {
       for (const rank of RANKS) {
@@ -17,21 +18,25 @@ export class Deck {
     this.shuffle();
   }
 
-  shuffle() {
+  shuffle(): void {
     for (let i = this.cards.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
     }
   }
 
-  deal() {
+  deal(): [Card[], Card[]] {
     const mid = Math.ceil(this.cards.length / 2);
     const hand1 = this.cards.slice(0, mid);
     const hand2 = this.cards.slice(mid);
     return [hand1, hand2];
   }
 
-  get length() {
+  draw(): Card | undefined {
+    return this.cards.pop();
+  }
+
+  get length(): number {
     return this.cards.length;
   }
 }
