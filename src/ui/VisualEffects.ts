@@ -1,0 +1,119 @@
+export class VisualEffects {
+  private canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
+  private particles: Particle[] = [];
+  private animationFrameId: number | null = null;
+  private isActive: boolean = false;
+
+  constructor() {
+    this.canvas = document.createElement('canvas');
+    this.canvas.id = 'fx-canvas';
+    this.canvas.style.position = 'fixed';
+    this.canvas.style.top = '0';
+    this.canvas.style.left = '0';
+    this.canvas.style.width = '100%';
+    this.canvas.style.height = '100%';
+    this.canvas.style.pointerEvents = 'none';
+    this.canvas.style.zIndex = '9999';
+    document.body.appendChild(this.canvas);
+
+    this.ctx = this.canvas.getContext('2d')!;
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+  }
+
+  resize() {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  }
+
+  createConfetti(x: number, y: number, count: number = 50) {
+    for (let i = 0; i < count; i++) {
+      this.particles.push(new Particle(x, y));
+    }
+    if (!this.isActive) {
+      this.isActive = true;
+      this.loop();
+    }
+  }
+
+  screenShake() {
+    const body = document.body;
+    body.style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
+    setTimeout(() => {
+        body.style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
+        setTimeout(() => {
+            body.style.transform = 'none';
+        }, 50);
+    }, 50);
+  }
+
+  loop() {
+    if (this.particles.length === 0) {
+      this.isActive = false;
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      return;
+    }
+
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.update();
+      p.draw(this.ctx);
+      if (p.isDead()) {
+        this.particles.splice(i, 1);
+      }
+    }
+
+    this.animationFrameId = requestAnimationFrame(() => this.loop());
+  }
+}
+
+class Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  color: string;
+  size: number;
+  life: number;
+  rotation: number;
+  rotationSpeed: number;
+
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 10 + 2;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed - 5; // Upward bias
+    this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+    this.size = Math.random() * 10 + 5;
+    this.life = 100;
+    this.rotation = Math.random() * 360;
+    this.rotationSpeed = (Math.random() - 0.5) * 10;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.5; // Gravity
+    this.life -= 1;
+    this.rotation += this.rotationSpeed;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate((this.rotation * Math.PI) / 180);
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = this.life / 100;
+    ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+    ctx.restore();
+  }
+
+  isDead(): boolean {
+    return this.life <= 0 || this.y > window.innerHeight + 100;
+  }
+}

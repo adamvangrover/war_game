@@ -3,6 +3,7 @@ import { BLACKJACK_VALUES } from '../core/constants.js';
 import { Player } from '../core/Player.js';
 import { Card } from '../core/Card.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
+import { IGame } from '../core/interfaces.js';
 
 export type BlackjackState = 'READY' | 'playing' | 'DEALER_TURN' | 'GAME_OVER';
 export type BlackjackResult = 'PLAYER_WIN' | 'DEALER_WIN' | 'PUSH' | null;
@@ -17,7 +18,7 @@ export interface BlackjackGameState {
   result: BlackjackResult;
 }
 
-export class BlackjackGame extends EventEmitter {
+export class BlackjackGame extends EventEmitter implements IGame {
   public deck: Deck;
   public player: Player;
   public dealer: Player;
@@ -47,7 +48,7 @@ export class BlackjackGame extends EventEmitter {
     return this.dealer.hand;
   }
 
-  start(): BlackjackGameState {
+  start(): void {
     this.deck.initialize();
     this.player.hand = [];
     this.dealer.hand = [];
@@ -55,13 +56,13 @@ export class BlackjackGame extends EventEmitter {
     this.message = '';
     this.result = null;
 
-    // Auto-deal on start to match legacy behavior/tests
-    return this.deal();
+    // Auto-deal on start
+    this.deal();
   }
 
   deal(): BlackjackGameState {
-    if (this.deck.cards.length < 10) {
-      this.deck.initialize(); // Auto reshuffle if low
+    if (this.deck.length < 10) {
+      this.deck.initialize();
     }
 
     this.player.hand = [this.deck.draw()!, this.deck.draw()!];
@@ -69,7 +70,6 @@ export class BlackjackGame extends EventEmitter {
 
     this.state = 'playing';
 
-    // Check for Blackjack immediately
     const pScore = this.getHandValue(this.player.hand);
     const dScore = this.getHandValue(this.dealer.hand);
 
@@ -94,10 +94,12 @@ export class BlackjackGame extends EventEmitter {
 
     const score = this.getHandValue(this.player.hand);
 
+    // Emit update on hit regardless of outcome so UI shows the card
+    this.emit('update-hand', this.getState());
+
     if (score > 21) {
       this.endGame('DEALER_WIN', 'Bust!');
     }
-    // We do not auto-stand on 21 to allow user to see it.
 
     return this.getState();
   }
@@ -106,6 +108,7 @@ export class BlackjackGame extends EventEmitter {
     if (this.state !== 'playing') return this.getState();
 
     this.state = 'DEALER_TURN';
+    this.emit('dealer-reveal', this.getState()); // Show hole card
     this.playDealer();
     return this.getState();
   }
@@ -113,15 +116,14 @@ export class BlackjackGame extends EventEmitter {
   playDealer(): void {
     let score = this.getHandValue(this.dealer.hand as Card[]);
 
-    // Hit on soft 17 is standard in some casinos, strict 17 in others.
-    // Here we implement: Dealer must draw to 16 and stand on all 17s.
     while (score < 17) {
       const card = this.deck.draw();
       if (card) {
           this.dealer.hand.push(card);
           score = this.getHandValue(this.dealer.hand as Card[]);
+          this.emit('dealer-hit', this.getState());
       } else {
-          break; // Deck empty
+          break;
       }
     }
 
@@ -177,7 +179,6 @@ export class BlackjackGame extends EventEmitter {
     return {
       state: this.state,
       playerHand: this.player.hand,
-      // Hide first dealer card if player turn
       dealerHand: this.state === 'playing' && this.dealer.hand.length > 0
           ? [this.dealer.hand[0], null]
           : this.dealer.hand,
