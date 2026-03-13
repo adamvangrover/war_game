@@ -1,33 +1,41 @@
 import { Card } from './Card.js';
 
 export class Player {
-  private hand: Card[] = [];
+  private _hand: Card[] = [];
   public wins: number = 0;
   public roundsWon: number = 0;
 
   constructor(public readonly name: string) {}
 
   setHand(cards: Card[]): void {
-    this.hand = [...cards];
+    this._hand = [...cards];
   }
 
   playCard(): Card | undefined {
-    return this.hand.shift();
+    return this._hand.shift();
   }
 
   receiveCards(cards: Card[]): void {
-    this.hand.push(...cards);
+    this._hand.push(...cards);
   }
 
   get cardCount(): number {
-    return this.hand.length;
+    return this._hand.length;
   }
 
   get hasCards(): boolean {
-    return this.hand.length > 0;
+    return this._hand.length > 0;
   }
 
   resetRoundScore(): void {
     this.roundsWon = 0;
+  }
+
+  get hand(): Card[] {
+    return this._hand;
+  }
+
+  set hand(cards: Card[]) {
+    this._hand = cards;
   }
 }

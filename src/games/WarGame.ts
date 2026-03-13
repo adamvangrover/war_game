@@ -2,6 +2,8 @@ import { Deck } from '../core/Deck.js';
 import { WAR_VALUES } from '../core/constants.js';
 import { Player } from '../core/Player.js';
 import { Card } from '../core/Card.js';
+import { EventEmitter } from '../utils/EventEmitter.js';
+import { IGame } from '../core/interfaces.js';
 
 export interface WarResult {
   p1Card: Card | undefined;
@@ -21,14 +23,16 @@ export interface WarEvent {
   winner: Player | null;
 }
 
-export class WarGame {
+export class WarGame extends EventEmitter implements IGame {
   public player1: Player;
   public player2: Player;
   public deck: Deck;
   public gameInProgress: boolean;
   public roundCount: number;
+  private _isAutoPlaying: boolean = false;
 
   constructor(player1: Player, player2: Player) {
+    super();
     this.player1 = player1;
     this.player2 = player2;
     this.deck = new Deck();
@@ -36,11 +40,26 @@ export class WarGame {
     this.roundCount = 0;
   }
 
+  get isAutoPlaying(): boolean {
+      return this._isAutoPlaying;
+  }
+
+  set isAutoPlaying(value: boolean) {
+      if (this._isAutoPlaying !== value) {
+          this._isAutoPlaying = value;
+          this.emit('autoplay-change', value);
+      }
+  }
+
+  toggleAutoPlay() {
+      this.isAutoPlaying = !this.isAutoPlaying;
+  }
+
   getCardValue(card: Card): number {
     return WAR_VALUES[card.rank];
   }
 
-  start() {
+  start(): void {
     this.deck.initialize();
     const [hand1, hand2] = this.deck.deal();
     this.player1.setHand(hand1);
@@ -49,11 +68,12 @@ export class WarGame {
     this.player2.resetRoundScore();
     this.gameInProgress = true;
     this.roundCount = 0;
+    this.isAutoPlaying = false;
 
-    return {
+    this.emit('game-start', {
       player1DeckSize: this.player1.cardCount,
       player2DeckSize: this.player2.cardCount
-    };
+    });
   }
 
   playRound(): WarResult | null {
@@ -61,15 +81,7 @@ export class WarGame {
 
     if (!this.player1.hasCards || !this.player2.hasCards) {
       this.checkGameEnd();
-      return {
-          gameEnded: true,
-          winner: this.getGameWinner(),
-          p1Card: undefined,
-          p2Card: undefined,
-          isWar: false,
-          warEvents: [],
-          gameWinner: this.getGameWinner()
-      };
+      return null;
     }
 
     this.roundCount++;
@@ -108,6 +120,13 @@ export class WarGame {
       result.gameWinner = this.checkGameEnd();
     }
 
+    this.emit('round-result', result);
+
+    if (result.gameEnded) {
+        this.emit('game-over', { winner: result.gameWinner });
+        this.isAutoPlaying = false;
+    }
+
     return result;
   }
 
@@ -116,16 +135,17 @@ export class WarGame {
 
     while (warActive) {
       if (this.player1.cardCount < 4 || this.player2.cardCount < 4) {
+        let winner: Player;
         if (this.player1.cardCount < 4 && this.player2.cardCount >= 4) {
-             result.gameEnded = true;
-             result.gameWinner = this.player2;
+             winner = this.player2;
         } else if (this.player2.cardCount < 4 && this.player1.cardCount >= 4) {
-             result.gameEnded = true;
-             result.gameWinner = this.player1;
+             winner = this.player1;
         } else {
-             result.gameEnded = true;
-             result.gameWinner = this.player1.cardCount > this.player2.cardCount ? this.player1 : this.player2;
+             winner = this.player1.cardCount > this.player2.cardCount ? this.player1 : this.player2;
         }
+
+        result.gameEnded = true;
+        result.gameWinner = winner;
         warActive = false;
         return;
       }
@@ -142,7 +162,6 @@ export class WarGame {
       const p2Up = this.player2.playCard();
 
       if (p1Up && p2Up) {
-          // Add hidden cards if they exist (they should)
           p1Hidden.forEach(c => c && pile.push(c));
           p2Hidden.forEach(c => c && pile.push(c));
           pile.push(p1Up, p2Up);
@@ -173,7 +192,7 @@ export class WarGame {
           }
           result.warEvents.push(warEvent);
       } else {
-          warActive = false; // Should not happen given check above
+          warActive = false;
       }
     }
   }

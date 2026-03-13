@@ -10,7 +10,8 @@ describe('HighLowGame Logic', () => {
   });
 
   it('should start with a card', () => {
-    const state = game.start();
+    game.start();
+    const state = game.getState();
     expect(state.currentCard).toBeDefined();
     expect(state.score).toBe(0);
     expect(state.state).toBe('PLAYING');
@@ -18,14 +19,11 @@ describe('HighLowGame Logic', () => {
 
   it('should handle correct guess', () => {
     game.start();
-    // Force cards
-    // Current is 2. Next is 10. Guess Higher.
     game.currentCard = new Card('2', 'hearts');
+    (game.deck as any).draw = () => new Card('10', 'spades');
 
-    // Mock draw
-    game.deck.draw = () => new Card('10', 'spades');
-
-    const state = game.guess('higher');
+    game.guess('higher');
+    const state = game.getState();
     expect(state.score).toBe(1);
     expect(state.currentCard?.rank).toBe('10');
   });
@@ -33,9 +31,10 @@ describe('HighLowGame Logic', () => {
   it('should handle wrong guess', () => {
     game.start();
     game.currentCard = new Card('10', 'hearts');
-    game.deck.draw = () => new Card('2', 'spades');
+    (game.deck as any).draw = () => new Card('2', 'spades');
 
-    const state = game.guess('higher');
+    game.guess('higher');
+    const state = game.getState();
     expect(state.score).toBe(0);
     expect(state.result).toBe('LOSS');
     expect(state.state).toBe('GAME_OVER');

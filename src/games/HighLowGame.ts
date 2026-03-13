@@ -1,6 +1,8 @@
 import { Deck } from '../core/Deck.js';
 import { Card } from '../core/Card.js';
 import { WAR_VALUES } from '../core/constants.js';
+import { EventEmitter } from '../utils/EventEmitter.js';
+import { IGame } from '../core/interfaces.js';
 
 export type HighLowState = 'READY' | 'PLAYING' | 'GAME_OVER';
 export type HighLowResult = 'WIN' | 'LOSS' | null;
@@ -14,7 +16,7 @@ export interface HighLowGameState {
   result: HighLowResult;
 }
 
-export class HighLowGame {
+export class HighLowGame extends EventEmitter implements IGame {
   public deck: Deck;
   public state: HighLowState;
   public currentCard: Card | null;
@@ -24,6 +26,7 @@ export class HighLowGame {
   public result: HighLowResult;
 
   constructor() {
+    super();
     this.deck = new Deck();
     this.state = 'READY';
     this.currentCard = null;
@@ -33,7 +36,7 @@ export class HighLowGame {
     this.result = null;
   }
 
-  start(): HighLowGameState {
+  start(): void {
     this.deck.initialize();
     this.score = 0;
     this.currentCard = this.deck.draw()!;
@@ -41,11 +44,11 @@ export class HighLowGame {
     this.state = 'PLAYING';
     this.message = 'Higher or Lower?';
     this.result = null;
-    return this.getState();
+    this.emit('update', this.getState());
   }
 
-  guess(choice: 'higher' | 'lower'): HighLowGameState {
-    if (this.state !== 'PLAYING') return this.getState();
+  guess(choice: 'higher' | 'lower'): void {
+    if (this.state !== 'PLAYING') return;
 
     this.nextCard = this.deck.draw()!;
 
@@ -61,28 +64,26 @@ export class HighLowGame {
         this.message = 'Correct! Next card?';
         this.currentCard = this.nextCard;
         this.nextCard = null;
-        // Game continues until loss or deck empty?
-        // Let's just keep going.
+
+        if (this.deck.length === 0) {
+            this.state = 'GAME_OVER';
+            this.result = 'WIN';
+            this.message = `Deck Cleared! Final Score: ${this.score}`;
+        }
     } else {
         this.state = 'GAME_OVER';
         this.result = 'LOSS';
         this.message = `Wrong! It was ${this.nextCard.rank}. Final Score: ${this.score}`;
     }
 
-    if (this.deck.cards.length === 0) {
-        this.state = 'GAME_OVER';
-        this.result = 'WIN';
-        this.message = `Deck Cleared! Final Score: ${this.score}`;
-    }
-
-    return this.getState();
+    this.emit('update', this.getState());
   }
 
   getState(): HighLowGameState {
     return {
       state: this.state,
       currentCard: this.currentCard,
-      nextCard: this.nextCard, // Only shown briefly or on loss
+      nextCard: this.nextCard,
       score: this.score,
       message: this.message,
       result: this.result
