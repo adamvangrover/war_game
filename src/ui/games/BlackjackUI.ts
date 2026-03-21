@@ -3,6 +3,7 @@ import { BlackjackGame, BlackjackGameState } from '../../games/BlackjackGame.js'
 import { Card } from '../../core/Card.js';
 import { AudioManager } from '../AudioManager.js';
 import { Settings } from '../Settings.js';
+import { VisualEffects } from '../VisualEffects.js';
 
 export class BlackjackUI implements IGameUI {
   private game!: BlackjackGame;
@@ -12,6 +13,7 @@ export class BlackjackUI implements IGameUI {
     private container: HTMLElement,
     private audio: AudioManager,
     private settings: Settings,
+    private vfx: VisualEffects,
     private p1Slot: HTMLElement,
     private p2Slot: HTMLElement,
     private p1Score: HTMLElement,
@@ -59,6 +61,12 @@ export class BlackjackUI implements IGameUI {
             this.audio.playBlackjackBust();
         } else if (data.message.includes('Win')) {
             this.audio.playGameWin();
+            const rect = this.p1Slot.getBoundingClientRect();
+            if (data.message.includes('Blackjack')) {
+                this.vfx.createConfetti(rect.left + rect.width / 2, rect.top, 100);
+            } else {
+                this.vfx.createCoinShower(rect.left + rect.width / 2, rect.top, 30);
+            }
         }
         this.showGameOver(data.message);
         this.hitBtn.disabled = true;

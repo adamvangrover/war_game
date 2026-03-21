@@ -37,6 +37,16 @@ export class VisualEffects {
     }
   }
 
+  createCoinShower(x: number, y: number, count: number = 30) {
+    for (let i = 0; i < count; i++) {
+      this.particles.push(new CoinParticle(x, y));
+    }
+    if (!this.isActive) {
+      this.isActive = true;
+      this.loop();
+    }
+  }
+
   screenShake() {
     const body = document.body;
     body.style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
@@ -115,5 +125,45 @@ class Particle {
 
   isDead(): boolean {
     return this.life <= 0 || this.y > window.innerHeight + 100;
+  }
+}
+
+class CoinParticle extends Particle {
+  constructor(x: number, y: number) {
+    super(x, y);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 5 + 2;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed - 2;
+    this.color = Math.random() > 0.5 ? '#f1c40f' : '#f39c12'; // Gold variations
+    this.size = Math.random() * 15 + 10; // Larger than confetti
+    this.life = 150;
+    this.rotationSpeed = (Math.random() - 0.5) * 20;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    // 3D rotation effect for coin flip
+    const scaleY = Math.abs(Math.cos((this.rotation * Math.PI) / 180));
+    ctx.scale(1, scaleY);
+
+    ctx.beginPath();
+    ctx.arc(0, 0, this.size / 2, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#d35400';
+    ctx.stroke();
+
+    // Inner detail
+    ctx.beginPath();
+    ctx.arc(0, 0, this.size / 3, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.stroke();
+
+    ctx.restore();
   }
 }

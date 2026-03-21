@@ -34,7 +34,7 @@ export class Card {
     // Corner Rank & Suit
     const corner = `
       <g>
-        <text x="18" y="32" font-family="Arial, sans-serif" font-weight="bold" font-size="24" fill="${fill}" text-anchor="middle">${this.rank}</text>
+        <text x="18" y="32" font-family="'Poppins', sans-serif" font-weight="bold" font-size="24" fill="${fill}" text-anchor="middle">${this.rank}</text>
         <g transform="translate(8, 40) scale(0.2)">
            ${suitIcon}
         </g>
@@ -46,7 +46,7 @@ export class Card {
     if (['J', 'Q', 'K'].includes(this.rank)) {
        center = `
          <rect x="35" y="45" width="130" height="210" stroke="${fill}" stroke-width="2" fill="none" rx="5" />
-         <text x="100" y="150" font-family="Times New Roman, serif" font-size="80" fill="${fill}" text-anchor="middle" opacity="0.2">${this.rank}</text>
+         <text x="100" y="150" font-family="'Times New Roman', serif" font-size="80" fill="${fill}" text-anchor="middle" opacity="0.2">${this.rank}</text>
          <g transform="translate(50, 100) scale(1)">
             ${suitIcon}
          </g>
@@ -66,7 +66,7 @@ export class Card {
        `;
     } else {
        center = `
-          <text x="100" y="160" font-family="Arial" font-weight="bold" font-size="60" fill="${fill}" text-anchor="middle" opacity="0.8">${this.rank}</text>
+          <text x="100" y="160" font-family="'Poppins', sans-serif" font-weight="bold" font-size="60" fill="${fill}" text-anchor="middle" opacity="0.8">${this.rank}</text>
            <g transform="translate(75, 170) scale(0.5)">
             ${suitIcon}
            </g>
@@ -75,7 +75,16 @@ export class Card {
 
     return `
       <svg width="100%" height="100%" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
-        <rect width="200" height="300" rx="15" ry="15" fill="white" stroke="#bdc3c7" stroke-width="1"/>
+        <defs>
+          <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#f0f0f0;stop-opacity:1" />
+          </linearGradient>
+          <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+          </filter>
+        </defs>
+        <rect width="200" height="300" rx="15" ry="15" fill="url(#cardGrad)" stroke="#bdc3c7" stroke-width="1" filter="url(#dropShadow)"/>
         ${corner}
         <g transform="rotate(180, 100, 150)">
            ${corner}
@@ -85,19 +94,21 @@ export class Card {
     `;
   }
 
-  // Kept the polished back pattern from the upgrade branch
   static getBackSVG(): string {
     const pattern = `
       <defs>
-        <pattern id="BackPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-          <rect width="20" height="20" fill="#2c3e50"/>
-          <circle cx="10" cy="10" r="2" fill="#34495e"/>
-          <path d="M0,20 L20,0" stroke="#34495e" stroke-width="1"/>
-          <path d="M0,0 L20,20" stroke="#34495e" stroke-width="1"/>
+        <pattern id="BackPattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+          <rect width="40" height="40" fill="#1a252f"/>
+          <path d="M20 0 L40 20 L20 40 L0 20 Z" fill="#2c3e50"/>
+          <path d="M20 5 L35 20 L20 35 L5 20 Z" fill="#f1c40f" opacity="0.8"/>
+          <path d="M20 10 L30 20 L20 30 L10 20 Z" fill="#e74c3c" opacity="0.9"/>
         </pattern>
+        <filter id="backShadow" x="-10%" y="-10%" width="130%" height="130%">
+          <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+        </filter>
       </defs>
-      <rect width="200" height="300" rx="15" ry="15" fill="url(#BackPattern)" stroke="white" stroke-width="4"/>
-      <rect x="15" y="15" width="170" height="270" rx="10" ry="10" fill="none" stroke="white" stroke-width="2"/>
+      <rect width="200" height="300" rx="15" ry="15" fill="url(#BackPattern)" stroke="white" stroke-width="4" filter="url(#backShadow)"/>
+      <rect x="15" y="15" width="170" height="270" rx="10" ry="10" fill="none" stroke="#f1c40f" stroke-width="2"/>
     `;
     return `
       <svg width="100%" height="100%" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
