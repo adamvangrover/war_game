@@ -8,6 +8,8 @@ import { VisualEffects } from '../VisualEffects.js';
 export class BlackjackUI implements IGameUI {
   private game!: BlackjackGame;
   private listeners: { event: string, cb: any }[] = [];
+  private doubleBtn!: HTMLButtonElement;
+  private splitBtn!: HTMLButtonElement;
 
   constructor(
     private container: HTMLElement,
@@ -20,8 +22,29 @@ export class BlackjackUI implements IGameUI {
     private p2Score: HTMLElement,
     private hitBtn: HTMLButtonElement,
     private standBtn: HTMLButtonElement,
+    private controlsContainer: HTMLElement,
     private showGameOver: (msg: string) => void
-  ) {}
+  ) {
+      let dBtn = document.getElementById('btn-double') as HTMLButtonElement;
+      if (!dBtn) {
+          dBtn = document.createElement('button');
+          dBtn.id = 'btn-double';
+          dBtn.textContent = 'Double';
+          dBtn.className = 'btn primary';
+          this.controlsContainer.appendChild(dBtn);
+      }
+      this.doubleBtn = dBtn;
+
+      let sBtn = document.getElementById('btn-split') as HTMLButtonElement;
+      if (!sBtn) {
+          sBtn = document.createElement('button');
+          sBtn.id = 'btn-split';
+          sBtn.textContent = 'Split';
+          sBtn.className = 'btn primary';
+          this.controlsContainer.appendChild(sBtn);
+      }
+      this.splitBtn = sBtn;
+  }
 
   init(game: BlackjackGame): void {
     this.game = game;
@@ -30,34 +53,43 @@ export class BlackjackUI implements IGameUI {
     // Setup UI
     this.hitBtn.style.display = 'inline-block';
     this.standBtn.style.display = 'inline-block';
+    this.doubleBtn.style.display = 'inline-block';
+    this.splitBtn.style.display = 'inline-block';
+
     this.hitBtn.disabled = false;
     this.standBtn.disabled = false;
+    this.doubleBtn.disabled = false;
+    this.splitBtn.disabled = false;
 
     // Bind events
     this.hitBtn.onclick = () => { this.audio.init(); this.game.hit(); };
     this.standBtn.onclick = () => { this.audio.init(); this.game.stand(); };
+    this.doubleBtn.onclick = () => { this.audio.init(); this.game.double(); };
+    this.splitBtn.onclick = () => { this.audio.init(); this.game.split(); };
 
     const onDeal = (data: BlackjackGameState) => {
-        this.renderHands(data.playerHand, data.dealerHand);
+        this.renderHands(data.playerHands, data.dealerHand);
         this.updateScores();
+        this.updateButtons();
     };
     const onUpdateHand = (data: BlackjackGameState) => {
-        this.renderHand(data.playerHand, this.p1Slot, 30);
+        this.renderPlayerHands(data.playerHands, data.currentHandIndex);
         this.updateScores();
+        this.updateButtons();
     };
     const onDealerReveal = (data: BlackjackGameState) => {
-        this.renderHand(data.dealerHand, this.p2Slot, 30);
+        this.renderHand(data.dealerHand, this.p2Slot, 30, 'p2-slot');
         this.updateScores();
     };
     const onDealerHit = (data: BlackjackGameState) => {
         this.audio.playDeal();
-        this.renderHand(data.dealerHand, this.p2Slot, 30);
+        this.renderHand(data.dealerHand, this.p2Slot, 30, 'p2-slot');
         this.updateScores();
     };
     const onGameOver = (data: { message: string, dealerHand: (Card|null)[] }) => {
-        this.renderHand(data.dealerHand, this.p2Slot, 30);
+        this.renderHand(data.dealerHand, this.p2Slot, 30, 'p2-slot');
         this.updateScores();
-        if (data.message.includes('Bust')) {
+        if (data.message.includes('Bust!')) {
             this.audio.playBlackjackBust();
         } else if (data.message.includes('Win')) {
             this.audio.playGameWin();
@@ -71,6 +103,8 @@ export class BlackjackUI implements IGameUI {
         this.showGameOver(data.message);
         this.hitBtn.disabled = true;
         this.standBtn.disabled = true;
+        this.doubleBtn.disabled = true;
+        this.splitBtn.disabled = true;
     };
 
     this.game.on('deal', onDeal);
@@ -92,19 +126,37 @@ export class BlackjackUI implements IGameUI {
     this.listeners.forEach(l => this.game.off(l.event, l.cb));
     this.hitBtn.onclick = null;
     this.standBtn.onclick = null;
+    this.doubleBtn.onclick = null;
+    this.splitBtn.onclick = null;
     this.hitBtn.style.display = 'none';
     this.standBtn.style.display = 'none';
+    this.doubleBtn.style.display = 'none';
+    this.splitBtn.style.display = 'none';
   }
 
-  renderHands(pHand: Card[], dHand: (Card|null)[]) {
-    this.renderHand(pHand, this.p1Slot, 30);
-    this.renderHand(dHand, this.p2Slot, 30);
+  updateButtons() {
+      if (this.game.state !== 'playing') {
+          this.doubleBtn.disabled = true;
+          this.splitBtn.disabled = true;
+          this.hitBtn.disabled = true;
+          this.standBtn.disabled = true;
+          return;
+      }
+      this.hitBtn.disabled = false;
+      this.standBtn.disabled = false;
+      this.doubleBtn.disabled = !this.game.canDouble();
+      this.splitBtn.disabled = !this.game.canSplit();
+  }
+
+  renderHands(pHands: Card[][], dHand: (Card|null)[]) {
+    this.renderPlayerHands(pHands, this.game.currentHandIndex);
+    this.renderHand(dHand, this.p2Slot, 30, 'p2-slot');
     this.audio.playDeal();
   }
 
   updateScores() {
-    const pScore = this.game.calculateScore(this.game.playerHand);
-    this.p1Score.textContent = `Score: ${pScore}`;
+    const pScores = this.game.playerHands.map(h => this.game.calculateScore(h));
+    this.p1Score.textContent = `Score: ${pScores.join(' / ')}`;
     if (this.game.state === 'playing') {
         this.p2Score.textContent = `Score: ?`;
     } else {
@@ -113,8 +165,40 @@ export class BlackjackUI implements IGameUI {
     }
   }
 
-  renderHand(hand: (Card|null)[], targetSlot: HTMLElement, offsetStep: number) {
-    const slotId = targetSlot.id;
+  renderPlayerHands(hands: Card[][], currentIndex: number) {
+      const existing = document.querySelectorAll(`.card[data-slot^="p1-slot"]`);
+      existing.forEach(e => e.remove());
+
+      const numHands = hands.length;
+      const baseSpacing = 120; // horizontal spacing between hands
+
+      hands.forEach((hand, hIndex) => {
+          const slotId = `p1-slot-${hIndex}`;
+
+          hand.forEach((card, index) => {
+            const cardNode = this.createCardNode(card);
+            cardNode.classList.add('flipped');
+            cardNode.dataset.slot = slotId;
+
+            if (hIndex === currentIndex) {
+                cardNode.style.boxShadow = '0 0 10px 2px yellow';
+            }
+
+            this.container.appendChild(cardNode);
+
+            const rect = this.p1Slot.getBoundingClientRect();
+            const containerRect = this.container.getBoundingClientRect();
+
+            const handOffsetX = (hIndex - (numHands - 1)/2) * baseSpacing;
+            const cardOffsetX = (index - (hand.length-1)/2) * 30;
+
+            cardNode.style.left = (rect.left - containerRect.left + handOffsetX + cardOffsetX + 30) + 'px';
+            cardNode.style.top = (rect.top - containerRect.top) + 'px';
+        });
+      });
+  }
+
+  renderHand(hand: (Card|null)[], targetSlot: HTMLElement, offsetStep: number, slotId: string) {
     const existing = document.querySelectorAll(`.card[data-slot="${slotId}"]`);
     existing.forEach(e => e.remove());
 

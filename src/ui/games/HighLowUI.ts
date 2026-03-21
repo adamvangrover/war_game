@@ -9,6 +9,7 @@ export class HighLowUI implements IGameUI {
   private listeners: { event: string, cb: any }[] = [];
   private highBtn!: HTMLButtonElement;
   private lowBtn!: HTMLButtonElement;
+  private cashOutBtn!: HTMLButtonElement;
 
   constructor(
     private container: HTMLElement,
@@ -20,25 +21,21 @@ export class HighLowUI implements IGameUI {
     private controlsContainer: HTMLElement,
     private showMessage: (msg: string) => void
   ) {
-      let hBtn = document.getElementById('btn-higher') as HTMLButtonElement;
-      if (!hBtn) {
-          hBtn = document.createElement('button');
-          hBtn.id = 'btn-higher';
-          hBtn.textContent = 'Higher';
-          hBtn.className = 'btn primary';
-          this.controlsContainer.appendChild(hBtn);
-      }
-      this.highBtn = hBtn;
+      const getBtn = (id: string, text: string, cls: string = 'primary') => {
+          let btn = document.getElementById(id) as HTMLButtonElement;
+          if (!btn) {
+              btn = document.createElement('button');
+              btn.id = id;
+              btn.textContent = text;
+              btn.className = `btn ${cls}`;
+              this.controlsContainer.appendChild(btn);
+          }
+          return btn;
+      };
 
-      let lBtn = document.getElementById('btn-lower') as HTMLButtonElement;
-      if (!lBtn) {
-          lBtn = document.createElement('button');
-          lBtn.id = 'btn-lower';
-          lBtn.textContent = 'Lower';
-          lBtn.className = 'btn primary';
-          this.controlsContainer.appendChild(lBtn);
-      }
-      this.lowBtn = lBtn;
+      this.highBtn = getBtn('btn-higher', 'Higher');
+      this.lowBtn = getBtn('btn-lower', 'Lower');
+      this.cashOutBtn = getBtn('btn-hl-cashout', 'Cash Out');
   }
 
   init(game: HighLowGame): void {
@@ -47,9 +44,12 @@ export class HighLowUI implements IGameUI {
 
     this.highBtn.style.display = 'inline-block';
     this.lowBtn.style.display = 'inline-block';
+    this.cashOutBtn.style.display = 'inline-block';
+    this.cashOutBtn.disabled = true;
 
     this.highBtn.onclick = () => { this.audio.init(); this.game.guess('higher'); };
     this.lowBtn.onclick = () => { this.audio.init(); this.game.guess('lower'); };
+    this.cashOutBtn.onclick = () => { this.audio.init(); this.game.cashOut(); };
 
     const onUpdate = (state: HighLowGameState) => {
         const existing = document.querySelectorAll('.card');
@@ -62,18 +62,22 @@ export class HighLowUI implements IGameUI {
             this.placeAt(el, this.p1Slot);
         }
 
-        this.p1Score.textContent = `Score: ${state.score}`;
-        this.p2Score.textContent = `Cards Left: ${game.deck.length}`;
+        this.p1Score.textContent = `Score: ${state.score} | Pot: ${state.pot}`;
+        this.p2Score.textContent = `Cards Left: ${game.deck.length} | Streak: ${state.streak}`;
+
+        this.cashOutBtn.disabled = state.pot === 0;
 
         if (state.message) this.showMessage(state.message);
         if (state.result === 'WIN') {
             this.audio.playGameWin();
             this.highBtn.style.display = 'none';
             this.lowBtn.style.display = 'none';
+            this.cashOutBtn.style.display = 'none';
         } else if (state.result === 'LOSS') {
             this.audio.playBlackjackBust();
             this.highBtn.style.display = 'none';
             this.lowBtn.style.display = 'none';
+            this.cashOutBtn.style.display = 'none';
         }
     };
 
@@ -85,8 +89,11 @@ export class HighLowUI implements IGameUI {
     this.listeners.forEach(l => this.game.off(l.event, l.cb));
     this.highBtn.style.display = 'none';
     this.lowBtn.style.display = 'none';
+    this.cashOutBtn.style.display = 'none';
+
     this.highBtn.onclick = null;
     this.lowBtn.onclick = null;
+    this.cashOutBtn.onclick = null;
   }
 
   createCardNode(card: Card): HTMLElement {

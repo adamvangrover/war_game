@@ -6,6 +6,7 @@ import { IGame } from '../core/interfaces.js';
 
 export type BaccaratState = 'READY' | 'PLAYING' | 'GAME_OVER';
 export type BaccaratResult = 'PLAYER_WIN' | 'BANKER_WIN' | 'TIE' | null;
+export type BetChoice = 'PLAYER' | 'BANKER' | 'TIE' | null;
 
 export interface BaccaratGameState {
   state: BaccaratState;
@@ -15,6 +16,8 @@ export interface BaccaratGameState {
   bankerScore: number;
   message: string;
   result: BaccaratResult;
+  chips: number;
+  currentBet: BetChoice;
 }
 
 export class BaccaratGame extends EventEmitter implements IGame {
@@ -24,6 +27,8 @@ export class BaccaratGame extends EventEmitter implements IGame {
   public state: BaccaratState;
   public message: string;
   public result: BaccaratResult;
+  public chips: number;
+  public currentBet: BetChoice;
 
   constructor() {
     super();
@@ -33,6 +38,8 @@ export class BaccaratGame extends EventEmitter implements IGame {
     this.state = 'READY';
     this.message = '';
     this.result = null;
+    this.chips = 1000;
+    this.currentBet = null;
   }
 
   start(): void {
@@ -42,11 +49,29 @@ export class BaccaratGame extends EventEmitter implements IGame {
     this.state = 'READY';
     this.message = 'Place your bet';
     this.result = null;
+    this.currentBet = null;
     this.emit('update', this.getState());
   }
 
+  placeBet(choice: BetChoice): void {
+      if (this.state !== 'READY' || this.currentBet !== null) return;
+      this.currentBet = choice;
+      this.message = `Bet placed on ${choice}. Dealing...`;
+      this.emit('update', this.getState());
+
+      setTimeout(() => this.deal(), 500);
+  }
+
   playRound(): void {
-      this.deal();
+      if (this.state !== 'READY' && this.state !== 'GAME_OVER') return;
+
+      this.player.hand = [];
+      this.banker.hand = [];
+      this.state = 'READY';
+      this.message = 'Place your bet';
+      this.result = null;
+      this.currentBet = null;
+      this.emit('update', this.getState());
   }
 
   getCardValue(card: Card): number {
@@ -61,6 +86,8 @@ export class BaccaratGame extends EventEmitter implements IGame {
   }
 
   deal(): BaccaratGameState {
+    if (!this.currentBet) return this.getState();
+
     if (this.deck.length < 6) {
       this.deck.initialize();
     }
@@ -120,6 +147,7 @@ export class BaccaratGame extends EventEmitter implements IGame {
 
   resolveGame(pScore: number, bScore: number) {
       this.state = 'GAME_OVER';
+
       if (pScore > bScore) {
           this.result = 'PLAYER_WIN';
           this.message = 'Player Wins!';
@@ -129,6 +157,25 @@ export class BaccaratGame extends EventEmitter implements IGame {
       } else {
           this.result = 'TIE';
           this.message = 'Tie!';
+      }
+
+      if (this.currentBet) {
+          const betAmount = 10; // Fixed bet amount for now
+          if (
+              (this.currentBet === 'PLAYER' && this.result === 'PLAYER_WIN') ||
+              (this.currentBet === 'BANKER' && this.result === 'BANKER_WIN')
+          ) {
+              this.chips += betAmount;
+              this.message += ` You won ${betAmount} chips!`;
+          } else if (this.currentBet === 'TIE' && this.result === 'TIE') {
+              this.chips += betAmount * 8;
+              this.message += ` You won ${betAmount * 8} chips!`;
+          } else if (this.result !== 'TIE' || this.currentBet === 'TIE') {
+              this.chips -= betAmount;
+              this.message += ` You lost ${betAmount} chips.`;
+          } else if (this.result === 'TIE') {
+               this.message += ' Bets returned.';
+          }
       }
   }
 
@@ -140,7 +187,9 @@ export class BaccaratGame extends EventEmitter implements IGame {
       playerScore: this.getHandValue(this.player.hand),
       bankerScore: this.getHandValue(this.banker.hand),
       message: this.message,
-      result: this.result
+      result: this.result,
+      chips: this.chips,
+      currentBet: this.currentBet
     };
   }
 }

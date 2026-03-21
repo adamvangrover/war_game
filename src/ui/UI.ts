@@ -125,6 +125,30 @@ export class UI {
     this.standBtn.style.display = 'none';
     this.autoPlayBtn.style.display = 'none';
     
+    // Hide extra dynamic buttons
+    const doubleBtn = document.getElementById('btn-double');
+    if (doubleBtn) doubleBtn.style.display = 'none';
+    const splitBtn = document.getElementById('btn-split');
+    if (splitBtn) splitBtn.style.display = 'none';
+
+    const bacDeal = document.getElementById('btn-bac-deal');
+    if (bacDeal) bacDeal.style.display = 'none';
+    const bacPlayer = document.getElementById('btn-bac-player');
+    if (bacPlayer) bacPlayer.style.display = 'none';
+    const bacBanker = document.getElementById('btn-bac-banker');
+    if (bacBanker) bacBanker.style.display = 'none';
+    const bacTie = document.getElementById('btn-bac-tie');
+    if (bacTie) bacTie.style.display = 'none';
+    const bacChips = document.getElementById('bac-chips');
+    if (bacChips) bacChips.style.display = 'none';
+
+    const hlHigher = document.getElementById('btn-higher');
+    if (hlHigher) hlHigher.style.display = 'none';
+    const hlLower = document.getElementById('btn-lower');
+    if (hlLower) hlLower.style.display = 'none';
+    const hlCashout = document.getElementById('btn-hl-cashout');
+    if (hlCashout) hlCashout.style.display = 'none';
+
     this.p1Name.textContent = 'Player 1';
     this.p2Name.textContent = 'Player 2';
   }
@@ -165,7 +189,7 @@ export class UI {
             this.activeGameUI = new BlackjackUI(
                 this.container, this.audio, this.settings, this.vfx,
                 this.p1Slot, this.p2Slot, this.p1Score, this.p2Score,
-                this.hitBtn, this.standBtn,
+                this.hitBtn, this.standBtn, this.controlsContainer,
                 (msg) => this.showGameOver(msg)
             );
             this.activeGameUI.init(this.activeGame);

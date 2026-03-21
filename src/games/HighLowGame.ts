@@ -12,6 +12,8 @@ export interface HighLowGameState {
   currentCard: Card | null;
   nextCard: Card | null;
   score: number;
+  pot: number;
+  streak: number;
   message: string;
   result: HighLowResult;
 }
@@ -22,6 +24,8 @@ export class HighLowGame extends EventEmitter implements IGame {
   public currentCard: Card | null;
   public nextCard: Card | null;
   public score: number;
+  public pot: number;
+  public streak: number;
   public message: string;
   public result: HighLowResult;
 
@@ -32,6 +36,8 @@ export class HighLowGame extends EventEmitter implements IGame {
     this.currentCard = null;
     this.nextCard = null;
     this.score = 0;
+    this.pot = 0;
+    this.streak = 0;
     this.message = '';
     this.result = null;
   }
@@ -39,12 +45,23 @@ export class HighLowGame extends EventEmitter implements IGame {
   start(): void {
     this.deck.initialize();
     this.score = 0;
+    this.pot = 0;
+    this.streak = 0;
     this.currentCard = this.deck.draw()!;
     this.nextCard = null;
     this.state = 'PLAYING';
     this.message = 'Higher or Lower?';
     this.result = null;
     this.emit('update', this.getState());
+  }
+
+  cashOut(): void {
+      if (this.state !== 'PLAYING' || this.pot === 0) return;
+      this.score += this.pot;
+      this.message = `Cashed out ${this.pot} points! Streak reset.`;
+      this.pot = 0;
+      this.streak = 0;
+      this.emit('update', this.getState());
   }
 
   guess(choice: 'higher' | 'lower'): void {
@@ -60,19 +77,23 @@ export class HighLowGame extends EventEmitter implements IGame {
     else if (choice === 'lower' && v2 <= v1) correct = true;
 
     if (correct) {
-        this.score++;
-        this.message = 'Correct! Next card?';
+        this.streak++;
+        this.pot += 10 * this.streak; // Exponential pot growth based on streak
+        this.message = `Correct! Streak: ${this.streak}. Pot: ${this.pot}`;
         this.currentCard = this.nextCard;
         this.nextCard = null;
 
         if (this.deck.length === 0) {
             this.state = 'GAME_OVER';
             this.result = 'WIN';
+            this.score += this.pot;
             this.message = `Deck Cleared! Final Score: ${this.score}`;
         }
     } else {
         this.state = 'GAME_OVER';
         this.result = 'LOSS';
+        this.pot = 0; // Lost the pot
+        this.streak = 0;
         this.message = `Wrong! It was ${this.nextCard.rank}. Final Score: ${this.score}`;
     }
 
@@ -85,6 +106,8 @@ export class HighLowGame extends EventEmitter implements IGame {
       currentCard: this.currentCard,
       nextCard: this.nextCard,
       score: this.score,
+      pot: this.pot,
+      streak: this.streak,
       message: this.message,
       result: this.result
     };
