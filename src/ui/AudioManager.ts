@@ -49,9 +49,22 @@ export class AudioManager {
   }
 
   playRoundWin(): void {
-    this.playTone(440, 0.2, 'sine', 0, 0.1); // A4
-    this.playTone(554, 0.2, 'sine', 0.1, 0.1); // C#5
-    this.playTone(659, 0.4, 'sine', 0.2, 0.1); // E5
+    // Richer chord effect
+    this.playTone(440, 0.3, 'sine', 0, 0.1); // A4
+    this.playTone(440, 0.3, 'triangle', 0, 0.05);
+
+    this.playTone(554, 0.3, 'sine', 0.1, 0.1); // C#5
+    this.playTone(554, 0.3, 'triangle', 0.1, 0.05);
+
+    this.playTone(659, 0.5, 'sine', 0.2, 0.1); // E5
+    this.playTone(659, 0.5, 'triangle', 0.2, 0.05);
+  }
+
+  playShuffle(): void {
+    // Simulate shuffle with fast repeating noise-like saw bursts
+    for (let i = 0; i < 5; i++) {
+        this.playTone(150 + Math.random() * 50, 0.05, 'sawtooth', i * 0.06, 0.05);
+    }
   }
 
   playWar(): void {

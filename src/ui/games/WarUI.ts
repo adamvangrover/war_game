@@ -4,6 +4,7 @@ import { Card } from '../../core/Card.js';
 import { Player } from '../../core/Player.js';
 import { AudioManager } from '../AudioManager.js';
 import { Settings } from '../Settings.js';
+import { VisualEffects } from '../VisualEffects.js';
 
 export class WarUI implements IGameUI {
   private game!: WarGame;
@@ -14,6 +15,7 @@ export class WarUI implements IGameUI {
     private container: HTMLElement,
     private audio: AudioManager,
     private settings: Settings,
+    private vfx: VisualEffects,
     private p1Deck: HTMLElement,
     private p2Deck: HTMLElement,
     private p1Slot: HTMLElement,
@@ -126,6 +128,12 @@ export class WarUI implements IGameUI {
         if (roundWinner) {
             const targetDeck = roundWinner === this.game.player1 ? this.p1Deck : this.p2Deck;
             this.audio.playRoundWin();
+
+            if (roundWinner === this.game.player1 && !this.game.isAutoPlaying) {
+                const rect = targetDeck.getBoundingClientRect();
+                this.vfx.createCoinShower(rect.left + rect.width / 2, rect.top, 20);
+            }
+
             await this.animateToDeck(activeCards, targetDeck);
         }
     }
@@ -159,6 +167,7 @@ export class WarUI implements IGameUI {
 
   private async animateWar(warEvents: WarEvent[], activeCards: HTMLElement[]) {
     this.warBadge.classList.add('visible');
+    this.vfx.screenShake();
     this.audio.playWar();
     await this.wait(1000);
     this.warBadge.classList.remove('visible');

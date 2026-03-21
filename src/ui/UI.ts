@@ -5,6 +5,7 @@ import { HighLowGame } from '../games/HighLowGame.js';
 import { AudioManager } from './AudioManager.js';
 import { Menu } from './Menu.js';
 import { Settings } from './Settings.js';
+import { VisualEffects } from './VisualEffects.js';
 import { IGameUI } from './games/IGameUI.js';
 import { WarUI } from './games/WarUI.js';
 import { BlackjackUI } from './games/BlackjackUI.js';
@@ -39,7 +40,7 @@ export class UI {
   private menuBtn: HTMLButtonElement;
   private autoPlayBtn: HTMLButtonElement;
 
-  constructor(private audio: AudioManager) {
+  constructor(private audio: AudioManager, private vfx: VisualEffects) {
     this.menu = new Menu();
     this.settings = new Settings();
 
@@ -134,11 +135,17 @@ export class UI {
     this.resetBtn.style.display = 'inline-block';
     this.menuBtn.style.display = 'inline-block';
 
+    // Play initial shuffle sound
+    this.audio.init();
+    if (this.settings.soundEnabled) {
+        this.audio.playShuffle();
+    }
+
     switch (type) {
         case 'war':
             this.activeGame = new WarGame(new Player('Player 1'), new Player('Player 2'));
             this.activeGameUI = new WarUI(
-                this.container, this.audio, this.settings,
+                this.container, this.audio, this.settings, this.vfx,
                 this.p1Deck, this.p2Deck, this.p1Slot, this.p2Slot,
                 this.p1Score, this.p2Score, this.warBadge,
                 this.drawBtn, this.autoPlayBtn,
@@ -156,7 +163,7 @@ export class UI {
             this.p2Deck.style.visibility = 'hidden';
 
             this.activeGameUI = new BlackjackUI(
-                this.container, this.audio, this.settings,
+                this.container, this.audio, this.settings, this.vfx,
                 this.p1Slot, this.p2Slot, this.p1Score, this.p2Score,
                 this.hitBtn, this.standBtn,
                 (msg) => this.showGameOver(msg)

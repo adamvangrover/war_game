@@ -73,6 +73,9 @@ export class BlackjackGame extends EventEmitter implements IGame {
     const pScore = this.getHandValue(this.player.hand);
     const dScore = this.getHandValue(this.dealer.hand);
 
+    const state = this.getState();
+    this.emit('deal', state); // Always emit deal so initial cards are shown
+
     if (pScore === 21) {
       if (dScore === 21) {
         this.endGame('PUSH');
@@ -81,8 +84,6 @@ export class BlackjackGame extends EventEmitter implements IGame {
       }
     }
 
-    const state = this.getState();
-    this.emit('deal', state);
     return state;
   }
 

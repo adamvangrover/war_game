@@ -1,10 +1,12 @@
 import { AudioManager } from './ui/AudioManager';
+import { VisualEffects } from './ui/VisualEffects';
 import { UI } from './ui/UI';
 import './ui/styles.css';
 
 document.addEventListener('DOMContentLoaded', () => {
   const audio = new AudioManager();
-  const ui = new UI(audio);
+  const vfx = new VisualEffects();
+  const ui = new UI(audio, vfx);
 
   ui.init();
 
