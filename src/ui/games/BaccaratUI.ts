@@ -8,6 +8,10 @@ export class BaccaratUI implements IGameUI {
   private game!: BaccaratGame;
   private listeners: { event: string, cb: any }[] = [];
   private dealBtn: HTMLButtonElement;
+  private betPlayerBtn: HTMLButtonElement;
+  private betBankerBtn: HTMLButtonElement;
+  private betTieBtn: HTMLButtonElement;
+  private chipsDisplay!: HTMLElement;
 
   constructor(
     private container: HTMLElement,
@@ -20,40 +24,86 @@ export class BaccaratUI implements IGameUI {
     private controlsContainer: HTMLElement,
     private showMessage: (msg: string) => void
   ) {
-      let btn = document.getElementById('btn-bac-deal') as HTMLButtonElement;
-      if (!btn) {
-          btn = document.createElement('button');
-          btn.id = 'btn-bac-deal';
-          btn.textContent = 'Deal';
-          btn.className = 'btn primary';
-          this.controlsContainer.appendChild(btn);
+      const getBtn = (id: string, text: string, cls: string = 'primary') => {
+          let btn = document.getElementById(id) as HTMLButtonElement;
+          if (!btn) {
+              btn = document.createElement('button');
+              btn.id = id;
+              btn.textContent = text;
+              btn.className = `btn ${cls}`;
+              this.controlsContainer.appendChild(btn);
+          }
+          return btn;
+      };
+
+      this.dealBtn = getBtn('btn-bac-deal', 'Next Round');
+      this.betPlayerBtn = getBtn('btn-bac-player', 'Bet Player');
+      this.betBankerBtn = getBtn('btn-bac-banker', 'Bet Banker');
+      this.betTieBtn = getBtn('btn-bac-tie', 'Bet Tie');
+
+      let chipsEl = document.getElementById('bac-chips');
+      if (!chipsEl) {
+          chipsEl = document.createElement('div');
+          chipsEl.id = 'bac-chips';
+          chipsEl.style.position = 'absolute';
+          chipsEl.style.top = '20px';
+          chipsEl.style.left = '20px';
+          chipsEl.style.color = 'gold';
+          chipsEl.style.fontSize = '24px';
+          chipsEl.style.fontWeight = 'bold';
+          this.container.appendChild(chipsEl);
       }
-      this.dealBtn = btn;
+      this.chipsDisplay = chipsEl;
   }
 
   init(game: BaccaratGame): void {
     this.game = game;
     this.listeners = [];
 
-    this.dealBtn.style.display = 'inline-block';
+    this.dealBtn.style.display = 'none';
+    this.betPlayerBtn.style.display = 'inline-block';
+    this.betBankerBtn.style.display = 'inline-block';
+    this.betTieBtn.style.display = 'inline-block';
+    this.chipsDisplay.style.display = 'block';
 
     this.dealBtn.onclick = () => {
         this.audio.init();
         this.game.playRound();
     };
+    this.betPlayerBtn.onclick = () => { this.audio.init(); this.game.placeBet('PLAYER'); };
+    this.betBankerBtn.onclick = () => { this.audio.init(); this.game.placeBet('BANKER'); };
+    this.betTieBtn.onclick = () => { this.audio.init(); this.game.placeBet('TIE'); };
 
     const onUpdate = (state: BaccaratGameState) => {
         this.renderHand(state.playerHand, this.p1Slot, 30);
         this.renderHand(state.bankerHand, this.p2Slot, 30);
         this.p1Score.textContent = `Score: ${state.playerScore}`;
         this.p2Score.textContent = `Score: ${state.bankerScore}`;
+        this.chipsDisplay.textContent = `Chips: ${state.chips}`;
+
+        if (state.state === 'READY') {
+            this.betPlayerBtn.style.display = 'inline-block';
+            this.betBankerBtn.style.display = 'inline-block';
+            this.betTieBtn.style.display = 'inline-block';
+            this.dealBtn.style.display = 'none';
+        } else if (state.state === 'PLAYING') {
+            this.betPlayerBtn.style.display = 'none';
+            this.betBankerBtn.style.display = 'none';
+            this.betTieBtn.style.display = 'none';
+            this.dealBtn.style.display = 'none';
+        } else if (state.state === 'GAME_OVER') {
+            this.betPlayerBtn.style.display = 'none';
+            this.betBankerBtn.style.display = 'none';
+            this.betTieBtn.style.display = 'none';
+            this.dealBtn.style.display = 'inline-block';
+        }
 
         if (state.message) {
             this.showMessage(state.message);
         }
 
         if (state.result) {
-            if (state.result.includes('WIN')) {
+            if (state.result.includes('WIN') && state.result.split('_')[0] === state.currentBet) {
                 this.audio.playBaccaratWin();
             } else {
                 this.audio.playChip();
@@ -68,7 +118,15 @@ export class BaccaratUI implements IGameUI {
   teardown(): void {
     this.listeners.forEach(l => this.game.off(l.event, l.cb));
     this.dealBtn.style.display = 'none';
+    this.betPlayerBtn.style.display = 'none';
+    this.betBankerBtn.style.display = 'none';
+    this.betTieBtn.style.display = 'none';
+    this.chipsDisplay.style.display = 'none';
+
     this.dealBtn.onclick = null;
+    this.betPlayerBtn.onclick = null;
+    this.betBankerBtn.onclick = null;
+    this.betTieBtn.onclick = null;
   }
 
   renderHand(hand: Card[], targetSlot: HTMLElement, offsetStep: number) {

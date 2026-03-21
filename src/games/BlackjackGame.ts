@@ -8,14 +8,22 @@ import { IGame } from '../core/interfaces.js';
 export type BlackjackState = 'READY' | 'playing' | 'DEALER_TURN' | 'GAME_OVER';
 export type BlackjackResult = 'PLAYER_WIN' | 'DEALER_WIN' | 'PUSH' | null;
 
+export interface HandResult {
+  hand: Card[];
+  value: number;
+  result: BlackjackResult;
+  message: string;
+}
+
 export interface BlackjackGameState {
   state: BlackjackState;
-  playerHand: Card[];
+  playerHands: Card[][];
+  currentHandIndex: number;
   dealerHand: (Card | null)[];
-  playerValue: number;
+  playerValues: number[];
   dealerValue: number;
   message: string;
-  result: BlackjackResult;
+  results: HandResult[];
 }
 
 export class BlackjackGame extends EventEmitter implements IGame {
@@ -24,7 +32,11 @@ export class BlackjackGame extends EventEmitter implements IGame {
   public dealer: Player;
   public state: BlackjackState;
   public message: string;
-  public result: BlackjackResult;
+
+  public playerHands: Card[][] = [];
+  public currentHandIndex: number = 0;
+  public results: HandResult[] = [];
+  public hasDoubled: boolean[] = [];
 
   constructor() {
     super();
@@ -33,7 +45,10 @@ export class BlackjackGame extends EventEmitter implements IGame {
     this.dealer = new Player('Dealer');
     this.state = 'READY';
     this.message = '';
-    this.result = null;
+    this.playerHands = [];
+    this.currentHandIndex = 0;
+    this.results = [];
+    this.hasDoubled = [];
   }
 
   calculateScore(hand: Card[]): number {
@@ -41,7 +56,7 @@ export class BlackjackGame extends EventEmitter implements IGame {
   }
 
   get playerHand(): Card[] {
-    return this.player.hand;
+    return this.playerHands[this.currentHandIndex] || [];
   }
 
   get dealerHand(): (Card | null)[] {
@@ -50,11 +65,13 @@ export class BlackjackGame extends EventEmitter implements IGame {
 
   start(): void {
     this.deck.initialize();
-    this.player.hand = [];
+    this.playerHands = [];
+    this.currentHandIndex = 0;
     this.dealer.hand = [];
     this.state = 'READY';
     this.message = '';
-    this.result = null;
+    this.results = [];
+    this.hasDoubled = [];
 
     // Auto-deal on start
     this.deal();
@@ -65,19 +82,21 @@ export class BlackjackGame extends EventEmitter implements IGame {
       this.deck.initialize();
     }
 
-    this.player.hand = [this.deck.draw()!, this.deck.draw()!];
+    this.playerHands = [[this.deck.draw()!, this.deck.draw()!]];
+    this.currentHandIndex = 0;
     this.dealer.hand = [this.deck.draw()!, this.deck.draw()!];
+    this.hasDoubled = [false];
 
     this.state = 'playing';
 
-    const pScore = this.getHandValue(this.player.hand);
+    const pScore = this.getHandValue(this.playerHands[0]);
     const dScore = this.getHandValue(this.dealer.hand);
 
     if (pScore === 21) {
       if (dScore === 21) {
-        this.endGame('PUSH');
+        this.endGame();
       } else {
-        this.endGame('PLAYER_WIN', 'Blackjack!');
+        this.endGame();
       }
     }
 
@@ -86,19 +105,70 @@ export class BlackjackGame extends EventEmitter implements IGame {
     return state;
   }
 
+  canSplit(): boolean {
+    if (this.state !== 'playing' || this.playerHands.length >= 4) return false;
+    const currentHand = this.playerHands[this.currentHandIndex];
+    if (currentHand.length !== 2) return false;
+    return BLACKJACK_VALUES[currentHand[0].rank] === BLACKJACK_VALUES[currentHand[1].rank] || currentHand[0].rank === currentHand[1].rank;
+  }
+
+  split(): BlackjackGameState {
+    if (!this.canSplit()) return this.getState();
+
+    const currentHand = this.playerHands[this.currentHandIndex];
+    const card2 = currentHand.pop()!;
+
+    currentHand.push(this.deck.draw()!);
+    const newHand = [card2, this.deck.draw()!];
+
+    this.playerHands.splice(this.currentHandIndex + 1, 0, newHand);
+    this.hasDoubled.splice(this.currentHandIndex + 1, 0, false);
+
+    this.emit('update-hand', this.getState());
+
+    const score = this.getHandValue(currentHand);
+    if (score === 21) {
+        this.stand();
+    }
+
+    return this.getState();
+  }
+
+  canDouble(): boolean {
+    if (this.state !== 'playing') return false;
+    const currentHand = this.playerHands[this.currentHandIndex];
+    return currentHand.length === 2 && !this.hasDoubled[this.currentHandIndex];
+  }
+
+  double(): BlackjackGameState {
+    if (!this.canDouble()) return this.getState();
+
+    this.hasDoubled[this.currentHandIndex] = true;
+    const card = this.deck.draw();
+    if (card) this.playerHands[this.currentHandIndex].push(card);
+
+    this.emit('update-hand', this.getState());
+
+    this.stand();
+
+    return this.getState();
+  }
+
   hit(): BlackjackGameState {
     if (this.state !== 'playing') return this.getState();
 
     const card = this.deck.draw();
-    if (card) this.player.hand.push(card);
+    if (card) this.playerHands[this.currentHandIndex].push(card);
 
-    const score = this.getHandValue(this.player.hand);
+    const score = this.getHandValue(this.playerHands[this.currentHandIndex]);
 
     // Emit update on hit regardless of outcome so UI shows the card
     this.emit('update-hand', this.getState());
 
     if (score > 21) {
-      this.endGame('DEALER_WIN', 'Bust!');
+      this.stand();
+    } else if (score === 21) {
+      this.stand();
     }
 
     return this.getState();
@@ -107,6 +177,16 @@ export class BlackjackGame extends EventEmitter implements IGame {
   stand(): BlackjackGameState {
     if (this.state !== 'playing') return this.getState();
 
+    if (this.currentHandIndex < this.playerHands.length - 1) {
+        this.currentHandIndex++;
+        this.emit('update-hand', this.getState());
+        const score = this.getHandValue(this.playerHands[this.currentHandIndex]);
+        if (score === 21) {
+            this.stand();
+        }
+        return this.getState();
+    }
+
     this.state = 'DEALER_TURN';
     this.emit('dealer-reveal', this.getState()); // Show hole card
     this.playDealer();
@@ -114,44 +194,88 @@ export class BlackjackGame extends EventEmitter implements IGame {
   }
 
   playDealer(): void {
+    // Check if all hands busted, if so dealer doesn't need to play
+    let allBust = true;
+    for (const hand of this.playerHands) {
+        if (this.getHandValue(hand) <= 21) {
+            allBust = false;
+            break;
+        }
+    }
+
     let score = this.getHandValue(this.dealer.hand as Card[]);
 
-    while (score < 17) {
-      const card = this.deck.draw();
-      if (card) {
-          this.dealer.hand.push(card);
-          score = this.getHandValue(this.dealer.hand as Card[]);
-          this.emit('dealer-hit', this.getState());
-      } else {
-          break;
-      }
+    if (!allBust) {
+        while (score < 17) {
+          const card = this.deck.draw();
+          if (card) {
+              this.dealer.hand.push(card);
+              score = this.getHandValue(this.dealer.hand as Card[]);
+              this.emit('dealer-hit', this.getState());
+          } else {
+              break;
+          }
+        }
     }
 
-    const pScore = this.getHandValue(this.player.hand);
-
-    if (score > 21) {
-      this.endGame('PLAYER_WIN', 'Dealer Busts!');
-    } else if (score > pScore) {
-      this.endGame('DEALER_WIN', 'Dealer Wins');
-    } else if (score < pScore) {
-      this.endGame('PLAYER_WIN', 'You Win!');
-    } else {
-      this.endGame('PUSH', 'Push');
-    }
+    this.endGame();
   }
 
-  endGame(result: BlackjackResult, msg?: string): void {
+  endGame(): void {
     this.state = 'GAME_OVER';
-    this.result = result;
-    this.message = msg || (result === 'PUSH' ? 'Push' : result === 'PLAYER_WIN' ? 'You Win' : 'Dealer Wins');
+    const dealerScore = this.getHandValue(this.dealer.hand as Card[]);
 
-    if (result === 'PLAYER_WIN') this.player.wins++;
-    else if (result === 'DEALER_WIN') this.dealer.wins++;
+    this.results = [];
+
+    for (let i = 0; i < this.playerHands.length; i++) {
+        const pScore = this.getHandValue(this.playerHands[i]);
+        let res: BlackjackResult = null;
+        let msg = '';
+
+        if (pScore > 21) {
+            res = 'DEALER_WIN';
+            msg = 'Bust!';
+        } else if (dealerScore > 21) {
+            res = 'PLAYER_WIN';
+            msg = 'Dealer Busts!';
+        } else if (pScore === 21 && this.playerHands[i].length === 2 && !this.hasDoubled[i] && this.playerHands.length === 1) {
+            if (dealerScore === 21 && this.dealer.hand.length === 2) {
+                res = 'PUSH';
+                msg = 'Push';
+            } else {
+                res = 'PLAYER_WIN';
+                msg = 'Blackjack!';
+            }
+        } else if (dealerScore === 21 && this.dealer.hand.length === 2) {
+             res = 'DEALER_WIN';
+             msg = 'Dealer Blackjack!';
+        } else if (pScore > dealerScore) {
+            res = 'PLAYER_WIN';
+            msg = 'You Win!';
+        } else if (dealerScore > pScore) {
+            res = 'DEALER_WIN';
+            msg = 'Dealer Wins';
+        } else {
+            res = 'PUSH';
+            msg = 'Push';
+        }
+
+        if (res === 'PLAYER_WIN') this.player.wins++;
+        else if (res === 'DEALER_WIN') this.dealer.wins++;
+
+        this.results.push({
+            hand: this.playerHands[i],
+            value: pScore,
+            result: res,
+            message: msg
+        });
+    }
+
+    this.message = this.results.map((r, i) => `Hand ${i+1}: ${r.message}`).join(' | ');
 
     this.emit('game-over', {
-        winner: result === 'PLAYER_WIN' ? this.player : (result === 'DEALER_WIN' ? this.dealer : null),
         dealerHand: this.dealer.hand,
-        result,
+        results: this.results,
         message: this.message
     });
   }
@@ -178,16 +302,17 @@ export class BlackjackGame extends EventEmitter implements IGame {
   getState(): BlackjackGameState {
     return {
       state: this.state,
-      playerHand: this.player.hand,
+      playerHands: this.playerHands,
+      currentHandIndex: this.currentHandIndex,
       dealerHand: this.state === 'playing' && this.dealer.hand.length > 0
           ? [this.dealer.hand[0], null]
           : this.dealer.hand,
-      playerValue: this.getHandValue(this.player.hand),
+      playerValues: this.playerHands.map(h => this.getHandValue(h)),
       dealerValue: this.state === 'playing' && this.dealer.hand.length > 0
           ? BLACKJACK_VALUES[this.dealer.hand[0]!.rank]
           : this.getHandValue(this.dealer.hand),
       message: this.message,
-      result: this.result
+      results: this.results
     };
   }
 }
