@@ -57,7 +57,6 @@ describe('BlackjackGame', () => {
   });
 
   it('should handle stand and dealer play', () => new Promise<void>(done => {
-      game.start();
       game.on('game-over', (data) => {
           // Dealer should have played and a winner declared
           expect(data.message).toBeDefined(); // The new logic passes a message instead of a winner
@@ -65,6 +64,12 @@ describe('BlackjackGame', () => {
           expect(data.dealerHand.every((c: any) => c !== null)).toBe(true);
           done();
       });
-      game.stand();
+      game.deck.shuffle = () => {
+          (game.deck as any).cards.reverse();
+      };
+      game.start();
+      if (game.state !== 'GAME_OVER') {
+          game.stand();
+      }
   }));
 });
