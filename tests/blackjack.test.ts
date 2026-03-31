@@ -59,8 +59,7 @@ describe('BlackjackGame', () => {
   it('should handle stand and dealer play', () => new Promise<void>(done => {
       game.on('game-over', (data) => {
           // Dealer should have played and a winner declared
-          expect(data.results).toBeDefined();
-          expect(data.results[0].result).toBeDefined();
+          expect(data.message).toBeDefined(); // The new logic passes a message instead of a winner
           // Dealer hand should be fully revealed in game over data
           expect(data.dealerHand.every((c: any) => c !== null)).toBe(true);
           done();

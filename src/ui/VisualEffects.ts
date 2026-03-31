@@ -47,6 +47,14 @@ export class VisualEffects {
     }
   }
 
+  createFloatingText(text: string, x: number, y: number) {
+    this.particles.push(new FloatingTextParticle(text, x, y));
+    if (!this.isActive) {
+      this.isActive = true;
+      this.loop();
+    }
+  }
+
   screenShake() {
     const body = document.body;
     body.style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
@@ -125,6 +133,45 @@ class Particle {
 
   isDead(): boolean {
     return this.life <= 0 || this.y > window.innerHeight + 100;
+  }
+}
+
+class FloatingTextParticle extends Particle {
+  text: string;
+
+  constructor(text: string, x: number, y: number) {
+    super(x, y);
+    this.text = text;
+    this.vy = -Math.random() * 2 - 1; // Float upwards
+    this.vx = (Math.random() - 0.5) * 1;
+    this.life = 100;
+    this.rotationSpeed = 0;
+    this.rotation = 0;
+    this.color = '#f1c40f'; // Gold text
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life -= 1.5; // Fade out slightly faster
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.font = 'bold 24px Poppins, sans-serif';
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = Math.max(0, this.life / 100);
+    ctx.textAlign = 'center';
+
+    // Add text shadow for better visibility
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    ctx.fillText(this.text, 0, 0);
+    ctx.restore();
   }
 }
 

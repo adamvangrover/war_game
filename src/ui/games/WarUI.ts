@@ -132,6 +132,7 @@ export class WarUI implements IGameUI {
             if (roundWinner === this.game.player1 && !this.game.isAutoPlaying) {
                 const rect = targetDeck.getBoundingClientRect();
                 this.vfx.createCoinShower(rect.left + rect.width / 2, rect.top, 20);
+                this.vfx.createFloatingText("+1 Win", rect.left + rect.width / 2, rect.top - 20);
             }
 
             await this.animateToDeck(activeCards, targetDeck);

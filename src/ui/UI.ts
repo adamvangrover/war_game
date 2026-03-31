@@ -32,6 +32,7 @@ export class UI {
   private warBadge: HTMLElement;
   private centerMsg: HTMLElement;
   private controlsContainer: HTMLElement;
+  private gameTitle: HTMLElement;
 
   private drawBtn: HTMLButtonElement;
   private resetBtn: HTMLButtonElement;
@@ -57,6 +58,7 @@ export class UI {
     this.msgOverlay = document.getElementById('message-overlay')!;
     this.warBadge = document.getElementById('war-badge')!;
     this.centerMsg = document.getElementById('center-message')!;
+    this.gameTitle = document.getElementById('game-title')!;
 
     const getBtn = (id: string, text: string, cls: string = 'primary') => {
         let btn = document.getElementById(id) as HTMLButtonElement;
@@ -167,6 +169,7 @@ export class UI {
 
     switch (type) {
         case 'war':
+            this.gameTitle.textContent = 'War';
             this.activeGame = new WarGame(new Player('Player 1'), new Player('Player 2'));
             this.activeGameUI = new WarUI(
                 this.container, this.audio, this.settings, this.vfx,
@@ -180,6 +183,7 @@ export class UI {
             break;
 
         case 'blackjack':
+            this.gameTitle.textContent = 'Blackjack';
             this.activeGame = new BlackjackGame();
             this.p1Name.textContent = 'You';
             this.p2Name.textContent = 'Dealer';
@@ -197,6 +201,7 @@ export class UI {
             break;
 
         case 'baccarat':
+            this.gameTitle.textContent = 'Baccarat';
             this.activeGame = new BaccaratGame();
             this.p1Name.textContent = 'Player';
             this.p2Name.textContent = 'Banker';
@@ -204,7 +209,7 @@ export class UI {
             this.p2Deck.style.visibility = 'hidden';
 
             this.activeGameUI = new BaccaratUI(
-                this.container, this.audio, this.settings,
+                this.container, this.audio, this.settings, this.vfx,
                 this.p1Slot, this.p2Slot, this.p1Score, this.p2Score,
                 this.controlsContainer,
                 (msg) => this.showMessage(msg)
@@ -214,13 +219,14 @@ export class UI {
             break;
 
         case 'highlow':
+            this.gameTitle.textContent = 'High / Low';
             this.activeGame = new HighLowGame();
             this.p1Name.textContent = 'Current';
             this.p2Name.textContent = 'Deck';
             this.p1Deck.style.visibility = 'hidden';
 
             this.activeGameUI = new HighLowUI(
-                this.container, this.audio, this.settings,
+                this.container, this.audio, this.settings, this.vfx,
                 this.p1Slot, this.p1Score, this.p2Score,
                 this.controlsContainer,
                 (msg) => this.showMessage(msg)

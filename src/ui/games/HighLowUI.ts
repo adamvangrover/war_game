@@ -3,6 +3,7 @@ import { HighLowGame, HighLowGameState } from '../../games/HighLowGame.js';
 import { Card } from '../../core/Card.js';
 import { AudioManager } from '../AudioManager.js';
 import { Settings } from '../Settings.js';
+import { VisualEffects } from '../VisualEffects.js';
 
 export class HighLowUI implements IGameUI {
   private game!: HighLowGame;
@@ -15,6 +16,7 @@ export class HighLowUI implements IGameUI {
     private container: HTMLElement,
     private audio: AudioManager,
     private settings: Settings,
+    private vfx: VisualEffects,
     private p1Slot: HTMLElement,
     private p1Score: HTMLElement,
     private p2Score: HTMLElement,
@@ -68,8 +70,12 @@ export class HighLowUI implements IGameUI {
         this.cashOutBtn.disabled = state.pot === 0;
 
         if (state.message) this.showMessage(state.message);
+        const rect = this.p1Slot.getBoundingClientRect();
+
         if (state.result === 'WIN') {
             this.audio.playGameWin();
+            this.vfx.createCoinShower(rect.left + rect.width / 2, rect.top, 50);
+            this.vfx.createFloatingText("+$" + state.score, rect.left + rect.width / 2, rect.top - 20);
             this.highBtn.style.display = 'none';
             this.lowBtn.style.display = 'none';
             this.cashOutBtn.style.display = 'none';
@@ -78,6 +84,10 @@ export class HighLowUI implements IGameUI {
             this.highBtn.style.display = 'none';
             this.lowBtn.style.display = 'none';
             this.cashOutBtn.style.display = 'none';
+        } else if (state.message.startsWith('Correct')) {
+            this.vfx.createFloatingText("+" + (10 * state.streak) + " Pot", rect.left + rect.width / 2, rect.top - 20);
+        } else if (state.message.startsWith('Cashed out')) {
+            this.vfx.createCoinShower(rect.left + rect.width / 2, rect.top, 30);
         }
     };
 

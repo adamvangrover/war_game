@@ -1,6 +1,8 @@
 export class AudioManager {
   private ctx: AudioContext | null = null;
   public enabled: boolean = true;
+  private ambientOsc: OscillatorNode | null = null;
+  private ambientGain: GainNode | null = null;
 
   constructor() {}
 
@@ -13,6 +15,38 @@ export class AudioManager {
     }
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
+    }
+    this.updateAmbient();
+  }
+
+  private updateAmbient(): void {
+    if (!this.ctx) return;
+
+    if (this.enabled) {
+      if (!this.ambientOsc) {
+        this.ambientOsc = this.ctx.createOscillator();
+        this.ambientGain = this.ctx.createGain();
+
+        // Low, warm pad sound to simulate casino atmosphere
+        this.ambientOsc.type = 'sine';
+        this.ambientOsc.frequency.value = 110; // A2
+
+        // Very low volume, background noise
+        this.ambientGain.gain.value = 0.02;
+
+        this.ambientOsc.connect(this.ambientGain);
+        this.ambientGain.connect(this.ctx.destination);
+
+        this.ambientOsc.start();
+      }
+    } else {
+      if (this.ambientOsc) {
+        this.ambientOsc.stop();
+        this.ambientOsc.disconnect();
+        this.ambientGain?.disconnect();
+        this.ambientOsc = null;
+        this.ambientGain = null;
+      }
     }
   }
 
@@ -83,7 +117,10 @@ export class AudioManager {
   }
 
   playChip(): void {
-      this.playTone(1200, 0.05, 'sine', 0, 0.05);
+      // Layered chip sound (like a stack)
+      this.playTone(1200, 0.05, 'sine', 0, 0.04);
+      this.playTone(1500, 0.08, 'triangle', 0.02, 0.03);
+      this.playTone(2000, 0.04, 'sine', 0.04, 0.02);
   }
 
   playBaccaratWin(): void {
@@ -98,6 +135,7 @@ export class AudioManager {
 
   toggle(): boolean {
     this.enabled = !this.enabled;
+    this.updateAmbient();
     return this.enabled;
   }
 }
