@@ -36,7 +36,11 @@ def verify_suite():
             raise Exception("Stand button not visible")
         print("Stand button visible.")
 
-        p1_cards = page.locator(".card[data-slot='p1-slot']")
+        # Wait a moment for animations to finish to ensure cards are in DOM
+        page.wait_for_timeout(500)
+
+        # In Blackjack the data slot is actually prepended with p1-slot- due to hand array
+        p1_cards = page.locator(".card[data-slot^='p1-slot']")
         count = p1_cards.count()
         print(f"Player has {count} cards.")
         if count < 2:

@@ -11,7 +11,10 @@ describe('BaccaratGame Logic', () => {
 
   it('should deal initial hands', () => {
     game.start();
+    game.placeBet('PLAYER'); // Must place a bet before deal in new logic
+    // deal() is called asynchronously by placeBet(), but for testing we can call it directly
     game.deal();
+
     // 2 cards each initially
     // Unless third card rule triggered immediately
     expect(game.player.hand.length).toBeGreaterThanOrEqual(2);

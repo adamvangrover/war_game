@@ -60,7 +60,7 @@ describe('BlackjackGame', () => {
       game.start();
       game.on('game-over', (data) => {
           // Dealer should have played and a winner declared
-          expect(data.winner).toBeDefined();
+          expect(data.message).toBeDefined(); // The new logic passes a message instead of a winner
           // Dealer hand should be fully revealed in game over data
           expect(data.dealerHand.every((c: any) => c !== null)).toBe(true);
           done();

@@ -96,11 +96,7 @@ export class BlackjackGame extends EventEmitter implements IGame {
     this.emit('deal', state); // Always emit deal so initial cards are shown
 
     if (pScore === 21) {
-      if (dScore === 21) {
-        this.endGame();
-      } else {
-        this.endGame();
-      }
+      this.endGame();
     }
 
     return state;

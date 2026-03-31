@@ -3,6 +3,7 @@ import { BaccaratGame, BaccaratGameState } from '../../games/BaccaratGame.js';
 import { Card } from '../../core/Card.js';
 import { AudioManager } from '../AudioManager.js';
 import { Settings } from '../Settings.js';
+import { VisualEffects } from '../VisualEffects.js';
 
 export class BaccaratUI implements IGameUI {
   private game!: BaccaratGame;
@@ -17,6 +18,7 @@ export class BaccaratUI implements IGameUI {
     private container: HTMLElement,
     private audio: AudioManager,
     private settings: Settings,
+    private vfx: VisualEffects,
     private p1Slot: HTMLElement,
     private p2Slot: HTMLElement,
     private p1Score: HTMLElement,
@@ -103,10 +105,24 @@ export class BaccaratUI implements IGameUI {
         }
 
         if (state.result) {
-            if (state.result.includes('WIN') && state.result.split('_')[0] === state.currentBet) {
+            const rect = this.chipsDisplay.getBoundingClientRect();
+            if (
+                (state.currentBet === 'PLAYER' && state.result === 'PLAYER_WIN') ||
+                (state.currentBet === 'BANKER' && state.result === 'BANKER_WIN')
+            ) {
                 this.audio.playBaccaratWin();
+                this.vfx.createCoinShower(rect.left + rect.width / 2, rect.top, 20);
+                this.vfx.createFloatingText("+$10", rect.left + rect.width / 2, rect.top - 20);
+            } else if (state.currentBet === 'TIE' && state.result === 'TIE') {
+                this.audio.playBaccaratWin();
+                this.vfx.createCoinShower(rect.left + rect.width / 2, rect.top, 40);
+                this.vfx.createFloatingText("+$80", rect.left + rect.width / 2, rect.top - 20);
+            } else if (state.result !== 'TIE' || state.currentBet === 'TIE') {
+                this.audio.playChip();
+                this.vfx.createFloatingText("-$10", rect.left + rect.width / 2, rect.top - 20);
             } else {
                 this.audio.playChip();
+                this.vfx.createFloatingText("Push", rect.left + rect.width / 2, rect.top - 20);
             }
         }
     };
