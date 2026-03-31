@@ -8,39 +8,39 @@ def run():
         page = browser.new_page()
         try:
             print("Navigating to app...")
-            page.goto("http://localhost:4173")
+            page.goto("http://localhost:5173")
 
             # Wait for hydration/load
-            page.wait_for_selector("#main-menu")
+            page.wait_for_selector("#main-menu-overlay")
 
             # Test War
             print("Testing War...")
             page.click("#btn-war")
             page.wait_for_selector("#draw-btn", state="visible")
-            page.click("#btn-back-menu")
-            page.wait_for_selector("#main-menu", state="visible")
+            page.click("#btn-menu")
+            page.wait_for_selector("#main-menu-overlay", state="visible")
 
             # Test Blackjack
             print("Testing Blackjack...")
             page.click("#btn-blackjack")
-            page.wait_for_selector("#btn-deal", state="visible")
-            page.click("#btn-back-menu")
-            page.wait_for_selector("#main-menu", state="visible")
+            page.wait_for_selector("#btn-hit", state="visible")
+            page.click("#btn-menu")
+            page.wait_for_selector("#main-menu-overlay", state="visible")
 
             # Test Baccarat
             print("Testing Baccarat...")
             page.click("#btn-baccarat")
-            page.wait_for_selector("#btn-bac-deal", state="visible")
-            page.click("#btn-back-menu")
-            page.wait_for_selector("#main-menu", state="visible")
+            page.wait_for_selector("#btn-bac-player", state="visible")
+            page.click("#btn-menu")
+            page.wait_for_selector("#main-menu-overlay", state="visible")
 
             # Test High-Low
             print("Testing High-Low...")
             page.click("#btn-highlow")
             # Logic Update: HighLow auto-starts, so look for gameplay buttons
             page.wait_for_selector("#btn-higher", state="visible")
-            page.click("#btn-back-menu")
-            page.wait_for_selector("#main-menu", state="visible")
+            page.click("#btn-menu")
+            page.wait_for_selector("#main-menu-overlay", state="visible")
 
             print("SUCCESS: All Game Modes Verified!")
 
