@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Card } from '../src/core/Card';
 import { Deck } from '../src/core/Deck';
 import { Player } from '../src/core/Player';
-import { WarGame, RoundResult } from '../src/engine/WarGame';
+import { WarGame, WarResult as RoundResult } from '../src/games/WarGame';
 
 describe('Deck', () => {
   it('should initialize with 52 cards', () => {

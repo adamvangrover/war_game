@@ -11,7 +11,7 @@ describe('BaccaratGame Logic', () => {
 
   it('should deal initial hands', () => {
     game.start();
-    game.deal();
+    game.currentBet = "PLAYER"; game.deal();
     // 2 cards each initially
     // Unless third card rule triggered immediately
     expect(game.player.hand.length).toBeGreaterThanOrEqual(2);

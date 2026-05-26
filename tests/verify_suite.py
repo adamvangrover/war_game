@@ -36,7 +36,7 @@ def verify_suite():
             raise Exception("Stand button not visible")
         print("Stand button visible.")
 
-        p1_cards = page.locator(".card[data-slot='p1-slot']")
+        p1_cards = page.locator(".card[data-slot^='p1-slot']")
         count = p1_cards.count()
         print(f"Player has {count} cards.")
         if count < 2:

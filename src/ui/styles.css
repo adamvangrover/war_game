@@ -233,7 +233,7 @@ button:disabled {
   height: 100%;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(5px);
-  display: flex;
+  display: none;
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -244,6 +244,7 @@ button:disabled {
 }
 
 .overlay.visible, .menu-overlay.visible {
+  display: flex;
   opacity: 1;
   pointer-events: auto;
 }

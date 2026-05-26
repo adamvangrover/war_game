@@ -2,6 +2,7 @@ import { WarGame } from '../games/WarGame.js';
 import { BlackjackGame } from '../games/BlackjackGame.js';
 import { BaccaratGame } from '../games/BaccaratGame.js';
 import { HighLowGame } from '../games/HighLowGame.js';
+import { VideoPokerGame } from '../games/VideoPokerGame.js';
 import { AudioManager } from './AudioManager.js';
 import { Menu } from './Menu.js';
 import { Settings } from './Settings.js';
@@ -11,6 +12,7 @@ import { WarUI } from './games/WarUI.js';
 import { BlackjackUI } from './games/BlackjackUI.js';
 import { BaccaratUI } from './games/BaccaratUI.js';
 import { HighLowUI } from './games/HighLowUI.js';
+import { VideoPokerUI } from './games/VideoPokerUI.js';
 import { Player } from '../core/Player.js';
 
 export class UI {
@@ -82,6 +84,7 @@ export class UI {
     this.menu.onBlackjackSelect = () => this.startGame('blackjack');
     this.menu.onBaccaratSelect = () => this.startGame('baccarat');
     this.menu.onHighLowSelect = () => this.startGame('highlow');
+    this.menu.onVideoPokerSelect = () => this.startGame('videopoker');
     this.menu.onSettingsSelect = () => this.settings.show();
 
     this.menuBtn.addEventListener('click', () => this.showMenu());
@@ -149,11 +152,14 @@ export class UI {
     const hlCashout = document.getElementById('btn-hl-cashout');
     if (hlCashout) hlCashout.style.display = 'none';
 
+    const vpDealDraw = document.getElementById('btn-vp-dealdraw');
+    if (vpDealDraw) vpDealDraw.style.display = 'none';
+
     this.p1Name.textContent = 'Player 1';
     this.p2Name.textContent = 'Player 2';
   }
 
-  startGame(type: 'war' | 'blackjack' | 'baccarat' | 'highlow') {
+  startGame(type: 'war' | 'blackjack' | 'baccarat' | 'highlow' | 'videopoker') {
     this.hideMenu();
     this.clearBoard();
     this.resetBtn.style.display = 'inline-block';
@@ -228,6 +234,23 @@ export class UI {
             this.activeGameUI.init(this.activeGame);
             this.activeGame.start();
             break;
+
+        case 'videopoker':
+            this.activeGame = new VideoPokerGame();
+            this.p1Name.textContent = 'Player';
+            this.p2Name.textContent = 'Video Poker';
+            this.p1Deck.style.visibility = 'hidden';
+            this.p2Deck.style.visibility = 'hidden';
+
+            this.activeGameUI = new VideoPokerUI(
+                this.container, this.audio, this.settings, this.vfx,
+                this.p1Slot, this.p1Score, this.p2Score,
+                this.controlsContainer,
+                (msg) => this.showMessage(msg)
+            );
+            this.activeGameUI.init(this.activeGame);
+            this.activeGame.start();
+            break;
     }
   }
 
@@ -236,6 +259,7 @@ export class UI {
     else if (this.activeGame instanceof BlackjackGame) this.startGame('blackjack');
     else if (this.activeGame instanceof BaccaratGame) this.startGame('baccarat');
     else if (this.activeGame instanceof HighLowGame) this.startGame('highlow');
+    else if (this.activeGame instanceof VideoPokerGame) this.startGame('videopoker');
   }
 
   private showGameOver(message: string) {

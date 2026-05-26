@@ -24,7 +24,7 @@ describe('HighLowGame Logic', () => {
 
     game.guess('higher');
     const state = game.getState();
-    expect(state.score).toBe(1);
+    expect(state.pot).toBe(10);
     expect(state.currentCard?.rank).toBe('10');
   });
 
